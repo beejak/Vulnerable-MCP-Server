@@ -243,9 +243,68 @@ Before submitting a PR, verify all of these:
 - [ ] Tool description does not leak that it's vulnerable
 - [ ] All credentials/keys are obviously fake (prefix with `fake_`, `FAKE`, `training-`, etc.)
 - [ ] Verification script passes all 5 checks
+- [ ] Pytest unit tests written (see [Writing Tests](#writing-tests-for-your-challenge) below)
+- [ ] `MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -q` passes with no new failures
 - [ ] Challenge maps to a real CWE
 - [ ] CVE reference included if applicable
 - [ ] Remediation guide references specific code/libraries (not just concepts)
+
+---
+
+## Writing Tests for Your Challenge
+
+Every new challenge needs at least three pytest tests. Add them to the appropriate existing test file (e.g. `tests/test_beginner.py`) or create `tests/test_yourcat.py`.
+
+### Minimum test class
+
+```python
+import pytest
+from tests.helpers import ToolCapture, assert_flag, assert_no_flag
+from vulnerabilities.your_module import YourModule
+
+@pytest.fixture
+def capture(sandbox_config):
+    cap = ToolCapture()
+    YourModule(cap, sandbox_config).register()
+    return cap
+
+class TestYOURCAT001:
+    def test_tool_registered(self, capture):
+        assert capture.has_tool("your_vulnerable_tool")
+
+    async def test_safe_input_no_flag(self, capture):
+        result = await capture.call("your_vulnerable_tool", input="normal")
+        assert_no_flag(result)
+
+    async def test_attack_input_triggers_flag(self, capture):
+        result = await capture.call("your_vulnerable_tool", input="<attack_payload>")
+        assert_flag(result, "YOURCAT-001")
+```
+
+### ToolCapture — how it works
+
+`ToolCapture` is a fake FastMCP app (`tests/helpers.py`). It intercepts `@app.tool()` decorators and stores the underlying functions so they can be called as plain Python — no server, no network, no subprocess needed.
+
+```python
+cap = ToolCapture()
+mod = YourModule(cap, config)
+mod.register()                    # @app.tool() calls are captured here
+await cap.call("tool_name", arg="value")  # calls the function directly
+```
+
+### Useful assertion helpers
+
+| Helper | Use when |
+|--------|----------|
+| `assert_flag(result, "YOURCAT-001")` | Attack input should trigger the specific flag |
+| `assert_no_flag(result)` | Safe input must not accidentally emit any flag |
+| `assert_sandboxed(result)` | Sandbox must have intercepted the call (`[SANDBOX]` in output) |
+
+### Run just your new tests
+
+```bash
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_yourcat.py -v
+```
 
 ---
 

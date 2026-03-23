@@ -2,8 +2,8 @@
 Testing Agent
 
 Verifies that each vulnerability challenge is actually exploitable.
-Runs exploit scripts against the running server, checks that flags
-are returned, and validates scanner compatibility.
+Runs the pytest test suite, interprets failures, and validates scanner
+compatibility. Can also write standalone exploit scripts.
 """
 import asyncio
 import json
@@ -24,43 +24,81 @@ class TestingAgent(BaseAgent):
 challenge in the vulnerable MCP server is actually exploitable and returns the correct flag.
 
 WHAT YOU DO:
-1. Read the challenge YAML to understand what the exploit should be
-2. Write a Python exploit script that calls the vulnerable tool with a malicious payload
-3. Run the exploit and verify the flag appears in the output
-4. Run mcp-scan against the server and verify it finds expected findings
-5. Report PASS/FAIL for each challenge with evidence
+1. Run the full pytest test suite with run_all_tests()
+2. If tests fail, read the failure output carefully
+3. Use run_specific_test() to isolate a failing test
+4. Write standalone exploit scripts for manual verification
+5. Run mcp-scan for scanner compatibility checks
+6. Report PASS/FAIL for each challenge with evidence
 
-EXPLOIT APPROACH:
-- For each challenge, use the MCP Python SDK to connect and call the tool
-- Use server stdin/stdout (stdio transport) for testing
-- Parse tool output for the FLAG{...} pattern
-- A challenge PASSES if the flag is in the output
-- A challenge FAILS if the flag is not in the output or an exception occurs
+PYTEST TEST LOCATIONS:
+- tests/test_beginner.py       — BEGINNER-001 through BEGINNER-004
+- tests/test_intermediate.py   — INTERMEDIATE-001 through INTERMEDIATE-004
+- tests/test_advanced.py       — ADVANCED-001 through ADVANCED-004
+- tests/test_sandbox.py        — Sandbox mode behavior
+- tests/test_ctf_system.py     — CTF helper tool system (YAML + flags)
+- tests/test_resources.py      — MCP sensitive resources
+- tests/test_modules.py        — VulnerabilityModule contract
+- tests/test_config.py         — Safety gate + env vars
+- tests/test_flags.py          — Flag registry
+
+A challenge PASSES if its pytest test class is all green.
+A challenge FAILS if any test in its class is red.
 
 SCANNER COMPATIBILITY:
 - mcp-scan must find: prompt injection, tool poisoning, cross-origin issues
-- Report which scanner findings match which challenge IDs
+- Only run scanner tests if mcp-scan is installed
 
-DO NOT:
-- Modify production code to make tests pass (that's the debugging agent's job)
-- Write tests that hard-code expected output (use flag pattern matching)
-- Test anything outside the documented challenge scope"""
+DO NOT modify production source code to make tests pass — that is the debugging agent's job."""
 
     @property
     def tools(self) -> list[dict]:
         return [
             {
-                "name": "read_file",
-                "description": "Read challenge YAML or source code",
+                "name": "run_all_tests",
+                "description": "Run the complete pytest test suite and return results",
                 "input_schema": {
                     "type": "object",
-                    "properties": {"path": {"type": "string"}},
+                    "properties": {
+                        "extra_args": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Extra pytest arguments e.g. ['-x', '--tb=long']",
+                        }
+                    }
+                }
+            },
+            {
+                "name": "run_specific_test",
+                "description": "Run a specific test file or test class",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "test_path": {
+                            "type": "string",
+                            "description": "e.g. 'tests/test_beginner.py::TestBEGINNER002' or 'tests/test_beginner.py'"
+                        },
+                        "verbose": {"type": "boolean", "default": True},
+                    },
+                    "required": ["test_path"]
+                }
+            },
+            {
+                "name": "read_file",
+                "description": "Read challenge YAML, test file, or source code",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "start_line": {"type": "integer"},
+                        "end_line": {"type": "integer"},
+                    },
                     "required": ["path"]
                 }
             },
             {
                 "name": "write_exploit",
-                "description": "Write an exploit script for a challenge",
+                "description": "Write a standalone exploit script for a challenge",
                 "input_schema": {
                     "type": "object",
                     "properties": {
@@ -72,7 +110,7 @@ DO NOT:
             },
             {
                 "name": "run_exploit",
-                "description": "Run an exploit script and capture output",
+                "description": "Run a standalone exploit script",
                 "input_schema": {
                     "type": "object",
                     "properties": {
@@ -96,19 +134,23 @@ DO NOT:
             },
             {
                 "name": "run_mcp_scan",
-                "description": "Run mcp-scan against the server config and return findings",
+                "description": "Run mcp-scan against the server (must be running in SSE mode)",
                 "input_schema": {
                     "type": "object",
                     "properties": {
-                        "config_path": {"type": "string", "default": "tests/scanner_compat/mcp_scan_config.json"}
+                        "server_url": {"type": "string", "default": "http://localhost:8000/sse"}
                     }
                 }
-            }
+            },
         ]
 
     async def handle_tool_call(self, tool_name: str, tool_input: dict) -> str:
-        if tool_name == "read_file":
-            return self._read_file(tool_input["path"])
+        if tool_name == "run_all_tests":
+            return self._run_all_tests(tool_input.get("extra_args", []))
+        elif tool_name == "run_specific_test":
+            return self._run_specific_test(tool_input["test_path"], tool_input.get("verbose", True))
+        elif tool_name == "read_file":
+            return self._read_file(tool_input["path"], tool_input.get("start_line"), tool_input.get("end_line"))
         elif tool_name == "write_exploit":
             return self._write_exploit(tool_input["challenge_id"], tool_input["script_content"])
         elif tool_name == "run_exploit":
@@ -116,7 +158,7 @@ DO NOT:
         elif tool_name == "check_flag":
             return self._check_flag(tool_input["challenge_id"], tool_input["output"])
         elif tool_name == "run_mcp_scan":
-            return self._run_mcp_scan(tool_input.get("config_path"))
+            return self._run_mcp_scan(tool_input.get("server_url", "http://localhost:8000/sse"))
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
 
@@ -125,12 +167,45 @@ DO NOT:
             return path
         return os.path.join(self.work_dir, path)
 
-    def _read_file(self, path: str) -> str:
+    def _run_pytest(self, args: list[str], timeout: int = 120) -> str:
+        """Core pytest runner shared by run_all_tests and run_specific_test."""
+        env = {**os.environ, "MCP_TRAINING_MODE": "true", "MCP_SANDBOX": "true"}
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest"] + args,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=self.work_dir,
+            env=env,
+        )
+        return (
+            f"Exit code: {result.returncode}\n"
+            f"{'PASSED' if result.returncode == 0 else 'FAILED'}\n\n"
+            f"{result.stdout}\n{result.stderr}"
+        )
+
+    def _run_all_tests(self, extra_args: list[str]) -> str:
+        args = ["tests/", "-v", "--tb=short"] + extra_args
+        return self._run_pytest(args, timeout=180)
+
+    def _run_specific_test(self, test_path: str, verbose: bool) -> str:
+        args = [test_path, "--tb=long"]
+        if verbose:
+            args.append("-v")
+        return self._run_pytest(args)
+
+    def _read_file(self, path: str, start: int = None, end: int = None) -> str:
         abs_path = self._abs(path)
         if not os.path.exists(abs_path):
             return f"ERROR: File not found: {path}"
         with open(abs_path, "r", encoding="utf-8") as f:
-            return f.read()
+            lines = f.readlines()
+        if start or end:
+            s = (start or 1) - 1
+            e = end or len(lines)
+            lines = lines[s:e]
+            return f"[Lines {s+1}–{e}]\n" + "".join(lines)
+        return "".join(lines)
 
     def _write_exploit(self, challenge_id: str, script_content: str) -> str:
         exploits_dir = os.path.join(self.work_dir, "tests", "exploits")
@@ -145,11 +220,7 @@ DO NOT:
         script_path = os.path.join(self.work_dir, "tests", "exploits", script_name)
         if not os.path.exists(script_path):
             return f"ERROR: Exploit script not found: {script_path}"
-
-        env = os.environ.copy()
-        env["MCP_TRAINING_MODE"] = "true"
-        env["MCP_SANDBOX"] = "true"
-
+        env = {**os.environ, "MCP_TRAINING_MODE": "true", "MCP_SANDBOX": "true"}
         result = subprocess.run(
             [sys.executable, script_path],
             capture_output=True,
@@ -160,11 +231,10 @@ DO NOT:
         )
         output = f"=== STDOUT ===\n{result.stdout}\n=== STDERR ===\n{result.stderr}"
         if result.returncode != 0:
-            output = f"PROCESS EXIT CODE: {result.returncode}\n" + output
+            output = f"EXIT CODE: {result.returncode}\n" + output
         return output
 
     def _check_flag(self, challenge_id: str, output: str) -> str:
-        import sys
         sys.path.insert(0, self.work_dir)
         try:
             from flags.flags import get_flag
@@ -175,11 +245,14 @@ DO NOT:
         except Exception as e:
             return f"ERROR checking flag: {e}"
 
-    def _run_mcp_scan(self, config_path: str = None) -> str:
+    def _run_mcp_scan(self, server_url: str) -> str:
         try:
             result = subprocess.run(
-                ["mcp-scan", "--json"],
-                capture_output=True, text=True, timeout=120, cwd=self.work_dir
+                ["mcp-scan", server_url, "--json"],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=self.work_dir,
             )
             return result.stdout or result.stderr or "No output from mcp-scan"
         except FileNotFoundError:

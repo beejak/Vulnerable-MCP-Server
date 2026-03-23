@@ -19,6 +19,7 @@ This guide covers every operational aspect of the server. For the game-style wal
 10. [Running Scanners](#10-running-scanners)
 11. [Docker Reference](#11-docker-reference)
 12. [Environment Variable Reference](#12-environment-variable-reference)
+13. [Running the Test Suite](#13-running-the-test-suite)
 
 ---
 
@@ -829,3 +830,105 @@ MCP_CTF_MODE=false            # true = persist scores (not yet implemented)
 ### Precedence
 
 Environment variables override defaults. There is no config file — all configuration is runtime env vars only. This is intentional: it makes the server easy to reconfigure from Docker and CI without modifying code.
+
+---
+
+## 13. Running the Test Suite
+
+The test suite has **346 tests** covering all 12 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
+
+### Install test dependencies
+
+```bash
+pip install pytest pytest-asyncio pytest-cov
+# or via the optional-dependencies group:
+pip install -e ".[dev]"
+```
+
+### Run all tests
+
+```bash
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -v
+```
+
+### Run a specific category
+
+```bash
+# All beginner challenge tests
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_beginner.py -v
+
+# Only sandbox enforcement tests
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_sandbox.py -v
+
+# CTF flag and hint system
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_ctf_system.py -v
+
+# All tests matching a marker
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest -m exploit -v
+```
+
+### Run with coverage
+
+```bash
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ --cov=. --cov-report=term-missing
+```
+
+### Test layout
+
+| File | What it covers |
+|------|---------------|
+| `tests/test_config.py` | Training mode gate, env var parsing, fake secret prefixes |
+| `tests/test_flags.py` | 12 flags present, correct format, uniqueness, submit_flag() |
+| `tests/test_modules.py` | Module contracts: base class, metadata fields, register() |
+| `tests/test_beginner.py` | BEGINNER-001 through BEGINNER-004 exploitability |
+| `tests/test_intermediate.py` | INTERMEDIATE-001 through INTERMEDIATE-004 exploitability |
+| `tests/test_advanced.py` | ADVANCED-001 through ADVANCED-004 exploitability |
+| `tests/test_sandbox.py` | Sandbox intercepts every attack category |
+| `tests/test_ctf_system.py` | YAML challenge definitions, flag submission, hints |
+| `tests/test_resources.py` | Sensitive MCP resources expose expected data |
+| `tests/scanner_compat/test_mcp_scan.py` | mcp-scan integration (skipped if mcp-scan not installed) |
+
+### Test design: ToolCapture pattern
+
+Tests don't start a real server. They use the `ToolCapture` helper (`tests/helpers.py`) — a fake FastMCP app that intercepts `@app.tool()` registrations:
+
+```python
+from tests.helpers import ToolCapture, assert_flag
+from vulnerabilities.injection import InjectionModule
+
+cap = ToolCapture()
+mod = InjectionModule(cap, config)
+mod.register()
+
+result = await cap.call("run_command", command="echo hello; whoami")
+assert_flag(result, "BEGINNER-002")
+```
+
+This pattern lets every vulnerability module be tested as pure Python — no network, no subprocess, no running server needed.
+
+### Pytest markers
+
+| Marker | Tests selected |
+|--------|---------------|
+| `sandbox` | Verify sandbox blocks real execution |
+| `exploit` | Verify attack triggers a flag |
+| `ctf` | CTF flag/hint/challenge system |
+| `scanner` | Requires external scanner (mcp-scan, etc.) |
+| `slow` | Tests that take > 2 seconds |
+
+Run a marker: `pytest -m sandbox`
+Skip a marker: `pytest -m "not slow"`
+
+### Coverage analysis agent
+
+The `TestDataAgent` in `agents/test_data_agent.py` can analyze coverage gaps and generate missing payloads:
+
+```bash
+# Analyze what's missing
+python agents/test_data_agent.py --analyze
+
+# Generate missing test payloads
+python agents/test_data_agent.py --generate
+```
+
+Output is written to `tests/coverage_gaps.json`.
