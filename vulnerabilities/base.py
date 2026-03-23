@@ -6,7 +6,10 @@ and resources onto the FastMCP server instance.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+
 from mcp.server.fastmcp import FastMCP
+
+from config import DifficultyLevel
 
 
 @dataclass
@@ -55,7 +58,6 @@ class VulnerabilityModule(ABC):
 
     def _is_enabled(self, difficulty: str) -> bool:
         """Check if this difficulty tier is enabled by config."""
-        from config import DifficultyLevel
         if self.config.difficulty == DifficultyLevel.ALL:
             return True
         return self.config.difficulty.value == difficulty

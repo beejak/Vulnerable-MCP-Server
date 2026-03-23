@@ -38,3 +38,6 @@ def check_flag(challenge_id: str, submitted: str) -> bool:
 def list_flags() -> dict[str, str]:
     """Return all challenge IDs (without flag values) for listing."""
     return {k: "FLAG{...}" for k in _FLAGS}
+
+
+__all__ = ["get_flag", "check_flag", "list_flags"]

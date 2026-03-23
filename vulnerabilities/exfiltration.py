@@ -8,6 +8,9 @@ import os
 from flags.flags import get_flag
 from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
+_SENSITIVE_NAMES = {"MCP_TRAINING_MODE", "MCP_SANDBOX", "PATH", "HOME", "USERPROFILE", "USERNAME", "COMPUTERNAME"}
+_SENSITIVE_KEYWORDS = {"KEY", "SECRET", "PASSWORD", "TOKEN"}
+
 
 class ExfiltrationModule(VulnerabilityModule):
 
@@ -76,12 +79,10 @@ class ExfiltrationModule(VulnerabilityModule):
                 return f"Environment variable '{name}' is not set."
 
             # Reward finding secrets in env
-            _sensitive_names = {"MCP_TRAINING_MODE", "MCP_SANDBOX", "PATH", "HOME", "USERPROFILE", "USERNAME", "COMPUTERNAME"}
-            _sensitive_keywords = {"KEY", "SECRET", "PASSWORD", "TOKEN"}
             name_upper = name.upper()
             is_sensitive = (
-                name_upper in _sensitive_names
-                or any(kw in name_upper for kw in _sensitive_keywords)
+                name_upper in _SENSITIVE_NAMES
+                or any(kw in name_upper for kw in _SENSITIVE_KEYWORDS)
             )
             if is_sensitive:
                 return (

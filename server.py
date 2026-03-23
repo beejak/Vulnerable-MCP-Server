@@ -20,13 +20,19 @@ Environment Variables:
 import os
 import sys
 
+import yaml
+
 # Add project root to path so relative imports work regardless of cwd
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _PROJECT_ROOT)
 
 from mcp.server.fastmcp import FastMCP
 from config import config, require_training_mode, STARTUP_BANNER
+from flags.flags import check_flag
 from vulnerabilities import ALL_MODULES
 from resources.sensitive import register_resources
+
+_CHALLENGES_DIR = os.path.join(_PROJECT_ROOT, "challenges")
 
 
 def create_server() -> FastMCP:
@@ -61,19 +67,17 @@ def create_server() -> FastMCP:
 
     @app.tool(description="List all available vulnerability challenges with their difficulty and status.")
     def list_challenges() -> str:
-        import yaml
-        challenges_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "challenges")
         output_lines = [
             "=== Vulnerable MCP Server — Challenge List ===\n",
             f"Difficulty filter: {config.difficulty}\n",
             f"Sandbox mode: {config.sandbox_mode}\n",
             "",
         ]
-        for fname in sorted(os.listdir(challenges_dir)):
+        for fname in sorted(os.listdir(_CHALLENGES_DIR)):
             if not fname.endswith(".yaml"):
                 continue
             tier = fname.replace(".yaml", "").upper()
-            with open(os.path.join(challenges_dir, fname)) as f:
+            with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
                 data = yaml.safe_load(f)
             output_lines.append(f"── {tier} ──")
             for ch in data.get("challenges", []):
@@ -87,12 +91,10 @@ def create_server() -> FastMCP:
 
     @app.tool(description="Get a hint for a specific challenge. hint_level: 1 (vague) to 3 (specific).")
     def get_hint(challenge_id: str, hint_level: int = 1) -> str:
-        import yaml
-        challenges_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "challenges")
-        for fname in os.listdir(challenges_dir):
+        for fname in os.listdir(_CHALLENGES_DIR):
             if not fname.endswith(".yaml"):
                 continue
-            with open(os.path.join(challenges_dir, fname)) as f:
+            with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
                 data = yaml.safe_load(f)
             for ch in data.get("challenges", []):
                 if ch["id"] == challenge_id:
@@ -104,7 +106,6 @@ def create_server() -> FastMCP:
 
     @app.tool(description="Submit a flag for a challenge to verify you solved it correctly.")
     def submit_flag(challenge_id: str, flag: str) -> str:
-        from flags.flags import check_flag
         if check_flag(challenge_id, flag):
             return (
                 f"CORRECT! Challenge {challenge_id} solved!\n"
@@ -117,12 +118,10 @@ def create_server() -> FastMCP:
 
     @app.tool(description="Get full details, exploitation steps, and remediation for a challenge.")
     def get_challenge_details(challenge_id: str) -> str:
-        import yaml
-        challenges_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "challenges")
-        for fname in os.listdir(challenges_dir):
+        for fname in os.listdir(_CHALLENGES_DIR):
             if not fname.endswith(".yaml"):
                 continue
-            with open(os.path.join(challenges_dir, fname)) as f:
+            with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
                 data = yaml.safe_load(f)
             for ch in data.get("challenges", []):
                 if ch["id"] == challenge_id:
