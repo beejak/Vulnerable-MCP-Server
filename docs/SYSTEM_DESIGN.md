@@ -1,6 +1,21 @@
 # System Design
 ## Multi-Agent Development System + Vulnerable MCP Server
 
+> **How to use this document:** If you want to run the server or play challenges, start with [docs/GETTING_STARTED.md](GETTING_STARTED.md). If you want to add a new vulnerability, read [docs/CONTRIBUTING.md](CONTRIBUTING.md). This document is for understanding the internal architecture and extending the system itself.
+
+---
+
+## Quick Navigation
+
+| I want to... | Go to |
+|-------------|-------|
+| Run my first exploit | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| Understand all CLI options | [USAGE.md](USAGE.md) |
+| Add a new vulnerability | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Understand agent architecture | [Part 2 of this doc](#part-2-multi-agent-development-system-design) |
+| See network diagrams | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Understand the threat model | [THREAT_MODEL.md](THREAT_MODEL.md) |
+
 ---
 
 ## Part 1: Vulnerable MCP Server Design

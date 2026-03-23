@@ -1,6 +1,16 @@
 # Architecture
 ## Vulnerable MCP Server
 
+> **How to use this document:** This document contains structural diagrams — repository layout, network topology, protocol flow, and agent system wiring. For operational guides, see [USAGE.md](USAGE.md) or [GETTING_STARTED.md](GETTING_STARTED.md).
+
+### Reading the Diagrams
+
+- **MCP Protocol Flow** → Understand what messages pass between client and server
+- **Single Server Docker Network** → What `docker compose up` creates
+- **Multi-Server Lab** → What `docker compose -f ... -f multi_server/...` creates (Phase 2)
+- **Multi-Agent System** → How `python agents/dashboard.py --run "..."` works internally
+- **Security Boundaries** → What `MCP_SANDBOX=true` vs `false` means at the system level
+
 ---
 
 ## 1. Repository Structure
