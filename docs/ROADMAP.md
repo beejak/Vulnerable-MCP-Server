@@ -64,6 +64,8 @@ Prompt injection in README/issue
 | MCP Sampling Abuse | Palo Alto Unit42 (Dec 2025) | Server becomes active prompt author; persistent session infection |
 | SSRF prevalence | JFrog / Wiz | 36.7% of public MCP servers have latent SSRF exposure |
 | Command injection prevalence | mcp-scan scan of 50+ servers | 23% contained some form of command injection |
+| Confused Deputy / Indirect Exfil | arXiv 2302.12173 (Greshake et al.) | LLM uses legitimately granted tools to exfiltrate data via injected instructions in fetched content |
+| CI/CD Poisoning via GitHub MCP | Invariant Labs / community research | PR-based injection targeting developer workflows; supply chain impact radius |
 
 ---
 
@@ -111,12 +113,14 @@ Prompt injection in README/issue
 | PROTO-001 | JSON-RPC State Manipulation | Call `tools/call` before `initialize` to trigger undefined behavior |
 | PROTO-002 | Oversized Payload | Send 100MB JSON-RPC message to exhaust memory |
 | MULTI-001 | Multi-Vector Chain | Combines SHADOW-001 + SAMPLE-001 + BEGINNER-004 in a single attack chain |
+| CI-001 | CI/CD Poisoning via GitHub MCP | PR with injected README payload causes agent to modify `.github/workflows/deploy.yml`; demonstrates confused deputy + indirect prompt injection at supply chain scale |
 
 **Deliverables:**
 - `vulnerabilities/rug_pull.py` — dynamic tool mutation engine
 - `vulnerabilities/tool_shadowing.py` — cross-server escalation
 - `vulnerabilities/sampling.py` — sampling request abuse
 - `vulnerabilities/protocol.py` — JSON-RPC protocol attacks
+- `vulnerabilities/github_mcp.py` — CI/CD poisoning simulation
 - `multi_server/` — second MCP server (trusted) for cross-origin demos
 
 ### Phase 3 — Scanner Compatibility (Q3 2026)
