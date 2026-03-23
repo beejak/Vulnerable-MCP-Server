@@ -1,0 +1,148 @@
+challenges:
+  - id: INTERMEDIATE-001
+    title: "Authentication Bypass — Missing Authorization Check"
+    category: auth
+    difficulty: intermediate
+    cwe: CWE-862
+    cvss: 8.8
+    points: 200
+    tools:
+      - login
+      - get_admin_config
+      - whoami
+    description: |
+      The get_admin_config tool is documented as requiring admin role, but the
+      authorization check was never implemented — there is a # TODO comment where
+      the check should be. Any caller can access admin configuration without
+      authenticating.
+    objective: |
+      Access admin configuration without providing admin credentials.
+    exploitation_steps:
+      - "Call get_admin_config() directly without calling login() first"
+      - "Observe that admin config including API keys is returned"
+      - "Alternatively: call login() with wrong credentials, then call get_admin_config()"
+      - "The flag is in the admin config response"
+    hints:
+      - level: 1
+        text: "Call get_admin_config() without logging in first."
+      - level: 2
+        text: "Does the tool actually check the session role, or just document that it should?"
+      - level: 3
+        text: "Look at the source — there's a # TODO: check auth comment. It was never implemented."
+    flag: "FLAG{4uth_byp4ss_n0_ch3ck}"
+    remediation: |
+      - Always enforce authorization at the function level, not just in documentation
+      - Use decorators or middleware to consistently apply access control
+      - Follow the principle of deny-by-default
+      - Audit all tools that claim to require authentication
+
+  - id: INTERMEDIATE-002
+    title: "SQL Injection via f-string Formatting"
+    category: injection
+    difficulty: intermediate
+    cwe: CWE-89
+    cvss: 9.1
+    points: 200
+    tools:
+      - query_users
+    description: |
+      The query_users tool builds SQL queries using Python f-strings instead of
+      parameterized queries. This allows injecting SQL fragments to bypass
+      filtering and access all records including admin credentials.
+    objective: |
+      Use SQL injection to retrieve the admin user's flag from the database.
+    exploitation_steps:
+      - "Normal query: query_users('alice') — returns one user"
+      - "Tautology injection: query_users(\"' OR '1'='1\") — returns all users"
+      - "Comment injection: query_users(\"admin' --\") — bypasses the closing quote"
+      - "UNION injection: query_users(\"' UNION SELECT 1,'injected','admin','FLAG' --\")"
+      - "The flag is in the admin row's flag column"
+    hints:
+      - level: 1
+        text: "The SQL query is built with f-strings: WHERE username = '{input}'"
+      - level: 2
+        text: "Try a tautology: ' OR '1'='1"
+      - level: 3
+        text: "The admin row has the flag in the flag column. Use OR 1=1 to return all rows."
+    flag: "FLAG{sql_1nj3ct10n_f_str1ng}"
+    remediation: |
+      - Always use parameterized queries: cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+      - Use an ORM with automatic parameterization (SQLAlchemy, Django ORM)
+      - Validate and sanitize all user inputs before database queries
+      - Never expose raw SQL error messages to users
+
+  - id: INTERMEDIATE-003
+    title: "Sensitive Data Exposure in Tool Descriptions"
+    category: exfiltration
+    difficulty: intermediate
+    cwe: CWE-312
+    cvss: 7.5
+    points: 200
+    tools:
+      - send_ai_message
+      - get_env_var
+      - list_env_vars
+    description: |
+      API keys and credentials are embedded directly in the send_ai_message tool
+      description. Any LLM client that calls tools/list will receive these secrets
+      verbatim. Additionally, get_env_var and list_env_vars expose all environment
+      variables without filtering.
+    objective: |
+      1. Find the API keys embedded in a tool description.
+      2. Use get_env_var to retrieve server secrets from environment variables.
+    exploitation_steps:
+      - "Call tools/list and inspect the send_ai_message description"
+      - "Observe: API keys are hardcoded in the description"
+      - "Call get_env_var('MCP_TRAINING_MODE') to see env var access"
+      - "Call list_env_vars() to dump all environment variables"
+      - "The flag appears when sensitive variables are accessed"
+    hints:
+      - level: 1
+        text: "Read tool descriptions carefully — is any sensitive data visible?"
+      - level: 2
+        text: "Call list_env_vars() to dump all environment variables."
+      - level: 3
+        text: "Check the send_ai_message tool description — API keys are embedded there."
+    flag: "FLAG{s3cr3t_l34k_1n_d3scr1pt10n}"
+    remediation: |
+      - Never embed secrets in tool descriptions, names, or error messages
+      - Use environment variable references in documentation (e.g., 'set by OPENAI_API_KEY')
+      - Implement a secrets manager (AWS Secrets Manager, HashiCorp Vault)
+      - Restrict env var access to a specific allowlist
+      - Audit all tool metadata for accidental secret exposure
+
+  - id: INTERMEDIATE-004
+    title: "State Manipulation — Missing Initialization Check"
+    category: auth
+    difficulty: intermediate
+    cwe: CWE-372
+    cvss: 6.5
+    points: 150
+    tools:
+      - initialize_server
+      - reset_all_data
+      - whoami
+    description: |
+      The reset_all_data tool is documented as requiring prior initialization
+      via initialize_server, but the _initialized flag is never checked before
+      executing the destructive operation.
+    objective: |
+      Call reset_all_data() without calling initialize_server() first.
+    exploitation_steps:
+      - "Call whoami() to see current state (initialized=False)"
+      - "Call reset_all_data() directly without initialization"
+      - "Observe that the operation succeeds despite no initialization"
+      - "The flag is in the reset_all_data response"
+    hints:
+      - level: 1
+        text: "Call reset_all_data() without calling initialize_server() first."
+      - level: 2
+        text: "Does the function actually check if initialization happened?"
+      - level: 3
+        text: "The _initialized flag exists but is never read in reset_all_data()."
+    flag: "FLAG{st4t3_m4n1pul4t10n_un1n1t}"
+    remediation: |
+      - Enforce state preconditions explicitly in code, not just documentation
+      - Raise an error (raise ValueError / raise ToolError) if preconditions aren't met
+      - Use a state machine pattern to enforce valid operation sequences
+      - Test all state transitions including invalid ones

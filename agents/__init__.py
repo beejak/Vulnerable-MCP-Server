@@ -1,0 +1,31 @@
+"""
+Multi-agent build system for the Vulnerable MCP Server.
+
+Agents:
+- OrchestratorAgent: decomposes tasks, routes to specialized agents, monitors progress
+- CodingAgent: writes vulnerability modules following project patterns
+- DebuggingAgent: diagnoses failures, applies minimal targeted fixes
+- TestingAgent: verifies exploits work, checks scanner compatibility
+- DocsAgent: keeps YAML challenges and README in sync with code
+
+Usage:
+    from agents.dashboard import run_with_dashboard
+    import asyncio
+    asyncio.run(run_with_dashboard("Implement OAUTH-001 challenge"))
+"""
+from agents.orchestrator import OrchestratorAgent
+from agents.coding_agent import CodingAgent
+from agents.debugging_agent import DebuggingAgent
+from agents.testing_agent import TestingAgent
+from agents.docs_agent import DocsAgent
+from agents.dashboard import AgentDashboard, run_with_dashboard
+
+__all__ = [
+    "OrchestratorAgent",
+    "CodingAgent",
+    "DebuggingAgent",
+    "TestingAgent",
+    "DocsAgent",
+    "AgentDashboard",
+    "run_with_dashboard",
+]

