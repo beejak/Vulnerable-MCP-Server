@@ -5,6 +5,8 @@
 **Status:** Active
 **Last Updated:** March 2026
 
+> **User-facing docs:** For installation and challenge walkthroughs, see [docs/GETTING_STARTED.md](GETTING_STARTED.md). For operational reference, see [docs/USAGE.md](USAGE.md). For contributing a new challenge, see [docs/CONTRIBUTING.md](CONTRIBUTING.md).
+
 ---
 
 ## 1. Problem Statement

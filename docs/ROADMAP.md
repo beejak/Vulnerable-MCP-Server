@@ -76,6 +76,10 @@ Prompt injection in README/issue
 - [x] CTF flag system (submit_flag, get_hint, list_challenges)
 - [x] Sandbox mode + training mode gate
 - [x] Docker + docker-compose
+- [x] Multi-agent build system (orchestrator, coding, debugging, testing, docs agents)
+- [x] Real-time agent observability dashboard (Rich TUI)
+- [x] Game-style walkthrough docs (GETTING_STARTED.md, USAGE.md, CONTRIBUTING.md)
+- [x] Threat model with CVE-accurate attack chains and arXiv references
 
 ### Phase 1 — CVE Accuracy (Q2 2026)
 

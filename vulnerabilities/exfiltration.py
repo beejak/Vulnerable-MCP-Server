@@ -3,8 +3,10 @@ Data Exfiltration Vulnerabilities:
 
 INTERMEDIATE-003: Secret Leakage (CWE-312) — API keys in tool descriptions and env vars
 """
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
+import os
+
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 
 class ExfiltrationModule(VulnerabilityModule):
@@ -68,19 +70,20 @@ class ExfiltrationModule(VulnerabilityModule):
         )
         def get_env_var(name: str) -> str:
             """VULNERABILITY: no allowlist — returns ANY environment variable."""
-            import os
-
             # VULNERABLE: returns any env var without filtering
             value = os.environ.get(name)
             if value is None:
                 return f"Environment variable '{name}' is not set."
 
             # Reward finding secrets in env
-            sensitive_names = {
-                "MCP_TRAINING_MODE", "MCP_SANDBOX", "PATH", "HOME",
-                "USERPROFILE", "USERNAME", "COMPUTERNAME",
-            }
-            if name.upper() in sensitive_names or "KEY" in name.upper() or "SECRET" in name.upper() or "PASSWORD" in name.upper() or "TOKEN" in name.upper():
+            _sensitive_names = {"MCP_TRAINING_MODE", "MCP_SANDBOX", "PATH", "HOME", "USERPROFILE", "USERNAME", "COMPUTERNAME"}
+            _sensitive_keywords = {"KEY", "SECRET", "PASSWORD", "TOKEN"}
+            name_upper = name.upper()
+            is_sensitive = (
+                name_upper in _sensitive_names
+                or any(kw in name_upper for kw in _sensitive_keywords)
+            )
+            if is_sensitive:
                 return (
                     f"{name}={value}\n"
                     f"[Sensitive variable accessed! Flag: {get_flag('INTERMEDIATE-003')}]"
@@ -95,8 +98,6 @@ class ExfiltrationModule(VulnerabilityModule):
         )
         def list_env_vars() -> str:
             """VULNERABILITY: dumps all environment variables including secrets."""
-            import os
-
             env_dump = "\n".join(f"{k}={v}" for k, v in sorted(os.environ.items()))
             return (
                 f"=== All Environment Variables ===\n"

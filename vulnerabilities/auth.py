@@ -1,11 +1,11 @@
 """
 Authentication & Authorization Vulnerabilities:
 
-INTERMEDIATE-001: Auth Bypass    (CWE-862) — admin tool callable without login
+INTERMEDIATE-001: Auth Bypass        (CWE-862) — admin tool callable without login
 INTERMEDIATE-004: State Manipulation (CWE-372) — actions callable before initialization
 """
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 # Module-level state — intentionally shared across all requests
 _current_role: str = "anonymous"

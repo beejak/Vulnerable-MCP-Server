@@ -3,8 +3,11 @@ Denial of Service Vulnerabilities:
 
 ADVANCED-003: Resource Exhaustion (CWE-400) — unbounded recursion and combinatorial explosion
 """
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
+import itertools
+import math
+
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 
 class DoSModule(VulnerabilityModule):
@@ -78,9 +81,6 @@ class DoSModule(VulnerabilityModule):
         )
         def generate_permutations(text: str) -> str:
             """VULNERABILITY: no length limit — 16 chars = 20 trillion permutations."""
-            import itertools
-            import math
-
             total = math.factorial(len(text))
 
             if cfg.sandbox_mode and len(text) > 8:
@@ -104,8 +104,8 @@ class DoSModule(VulnerabilityModule):
 
         @app.tool(
             description=(
-                "Ping a host to check connectivity. "
-                "Returns round-trip time statistics."
+                "Send repeated HTTP requests to a target for load testing. "
+                "Specify the target URL and request count."
             )
         )
         def flood_requests(target: str, count: int = 10) -> str:

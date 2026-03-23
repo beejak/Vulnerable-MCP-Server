@@ -8,8 +8,8 @@ the tool list, potentially manipulating the model's behavior.
 
 CWE-116: Improper Encoding or Escaping of Output
 """
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 # Hidden Unicode characters that encode adversarial instructions.
 # Zero-width space (U+200B), zero-width non-joiner (U+200C),

@@ -1,15 +1,21 @@
 """
 Injection Vulnerabilities:
 
-BEGINNER-002:  Command Injection    (CWE-78)   — subprocess shell=True
-BEGINNER-003:  Path Traversal       (CWE-22)   — unsanitized file paths
-INTERMEDIATE-002: SQL Injection     (CWE-89)   — f-string query formatting
-ADVANCED-002:  Template Injection   (CWE-94)   — unsandboxed Jinja2
-ADVANCED-004:  Pickle Deserialization RCE (CWE-502) — pickle.loads on user input
+BEGINNER-002:     Command Injection          (CWE-78)  — subprocess shell=True
+BEGINNER-003:     Path Traversal            (CWE-22)  — unsanitized file paths
+INTERMEDIATE-002: SQL Injection             (CWE-89)  — f-string query formatting
+ADVANCED-002:     Template Injection        (CWE-94)  — unsandboxed Jinja2
+ADVANCED-004:     Pickle Deserialization RCE (CWE-502) — pickle.loads on user input
 """
+import base64
+import pickle
 import sqlite3
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
+import subprocess
+
+from jinja2 import BaseLoader, Environment
+
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 # In-memory SQLite DB singleton — seeded once, reused across calls
 _DB_CONN: sqlite3.Connection | None = None
@@ -151,8 +157,6 @@ class InjectionModule(VulnerabilityModule):
         )
         def run_command(command: str) -> str:
             """VULNERABILITY: subprocess.run(command, shell=True) — no sanitization."""
-            import subprocess
-
             if cfg.sandbox_mode:
                 # Detect injection attempt for educational feedback
                 injection_chars = [";", "|", "&", "`", "$(", "\n", "\r"]
@@ -245,9 +249,10 @@ class InjectionModule(VulnerabilityModule):
                 "Supports full Jinja2 syntax including loops and conditionals."
             )
         )
-        def render_template(template: str, data: dict = {}) -> str:
+        def render_template(template: str, data: dict | None = None) -> str:
             """VULNERABILITY: unsandboxed jinja2.Environment allows __class__ traversal."""
-            from jinja2 import Environment, BaseLoader
+            if data is None:
+                data = {}
 
             # VULNERABLE: Environment (not SandboxedEnvironment) allows
             # accessing Python internals: {{ ''.__class__.__mro__[1].__subclasses__() }}
@@ -272,9 +277,6 @@ class InjectionModule(VulnerabilityModule):
         )
         def create_report(data: str) -> str:
             """VULNERABILITY: pickle.loads on unsanitized user-supplied base64 data."""
-            import pickle
-            import base64
-
             if cfg.sandbox_mode:
                 try:
                     decoded = base64.b64decode(data)

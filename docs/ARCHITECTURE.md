@@ -80,12 +80,15 @@ vulnerable-mcp-server/
 │       └── test_proximity.py   # Verify Proximity findings
 │
 └── docs/
-    ├── ROADMAP.md
-    ├── PRD.md
-    ├── SCOPE.md
-    ├── ARCHITECTURE.md         # This file
-    ├── SYSTEM_DESIGN.md
-    └── THREAT_MODEL.md
+    ├── GETTING_STARTED.md      # Game-style level walkthrough (start here)
+    ├── USAGE.md                # Full operational reference
+    ├── CONTRIBUTING.md         # How to add a new challenge
+    ├── ROADMAP.md              # Gap analysis, CVE table, phase milestones
+    ├── PRD.md                  # Product requirements and acceptance criteria
+    ├── SCOPE.md                # In/out of scope, priority matrix
+    ├── ARCHITECTURE.md         # This file — structure, network, agent diagrams
+    ├── SYSTEM_DESIGN.md        # Server + agent system design with code patterns
+    └── THREAT_MODEL.md         # CVE-based threat model, STRIDE analysis
 ```
 
 ---

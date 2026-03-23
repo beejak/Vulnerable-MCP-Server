@@ -1,11 +1,11 @@
 """
 Prompt Injection Vulnerabilities:
 
-BEGINNER-004: Indirect Prompt Injection (CWE-77) — fetch_url returns raw content into LLM context
-ADVANCED-001: SSRF (CWE-918) — fetch_url hits internal endpoints without URL filtering
+BEGINNER-004: Indirect Prompt Injection (CWE-77)  — fetch_url returns raw content into LLM context
+ADVANCED-001: SSRF                     (CWE-918) — fetch_url hits internal endpoints without URL filtering
 """
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta, Hint
 from flags.flags import get_flag
+from vulnerabilities.base import Hint, VulnerabilityMeta, VulnerabilityModule
 
 # Simulated malicious pages for offline demos — no real network needed
 _MALICIOUS_PAGES: dict[str, str] = {
@@ -142,7 +142,7 @@ class PromptInjectionModule(VulnerabilityModule):
 
             # VULNERABLE: real HTTP request with no filtering
             try:
-                import httpx
+                import httpx  # deferred — only needed in real-execution mode
                 async with httpx.AsyncClient(
                     follow_redirects=True,
                     timeout=10,
