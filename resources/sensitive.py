@@ -7,7 +7,9 @@ to demonstrate resource-based data exfiltration in MCP servers.
 Any MCP client can call resources/read with these URIs.
 """
 import os
+
 from mcp.server.fastmcp import FastMCP
+
 from config import config
 from flags.flags import get_flag
 
