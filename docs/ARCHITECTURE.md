@@ -3,6 +3,14 @@
 
 > **How to use this document:** This document contains structural diagrams — repository layout, network topology, protocol flow, and agent system wiring. For operational guides, see [USAGE.md](USAGE.md) or [GETTING_STARTED.md](GETTING_STARTED.md).
 
+---
+
+## The 10,000-foot View
+
+The server is a Python program that speaks the MCP protocol. It registers tools that have intentional bugs — missing auth checks, unparameterized SQL queries, unsandboxed template engines, and behaviors that change after the first call. When you call those tools, you see what the bugs enable. Every exploit is sandboxed by default so nothing on your machine is harmed.
+
+---
+
 ### Reading the Diagrams
 
 - **MCP Protocol Flow** → Understand what messages pass between client and server
@@ -37,10 +45,11 @@ vulnerable-mcp-server/
 │   ├── exfiltration.py         # INTERMEDIATE-003
 │   ├── prompt_injection.py     # BEGINNER-004, ADVANCED-001
 │   ├── dos.py                  # ADVANCED-003
-│   ├── oauth.py                # OAUTH-001/002 (Phase 2)
+│   ├── rug_pull.py             # RUG-001/002
+│   ├── tool_shadowing.py       # SHADOW-001/002
+│   ├── oauth.py                # OAUTH-001
+│   ├── multi_vector.py         # MULTI-001
 │   ├── git_ops.py              # GIT-001/002/003 (Phase 2)
-│   ├── rug_pull.py             # RUG-001/002 (Phase 2)
-│   ├── tool_shadowing.py       # SHADOW-001/002 (Phase 2)
 │   └── sampling.py             # SAMPLE-001/002 (Phase 2)
 │
 ├── resources/
@@ -51,6 +60,10 @@ vulnerable-mcp-server/
 │   ├── beginner.yaml
 │   ├── intermediate.yaml
 │   ├── advanced.yaml
+│   ├── rug_pull.yaml           # RUG-001/002
+│   ├── tool_shadowing.yaml     # SHADOW-001/002
+│   ├── oauth.yaml              # OAUTH-001
+│   ├── multi_vector.yaml       # MULTI-001
 │   └── cve_accurate.yaml       # Phase 2 CVE challenges
 │
 ├── multi_server/               # Phase 2: second trusted server for shadowing
@@ -71,9 +84,21 @@ vulnerable-mcp-server/
 │   └── dashboard.py            # Real-time agent observability TUI
 │
 ├── tests/
-│   ├── test_all_challenges.py  # End-to-end exploit verification
+│   ├── helpers.py              # ToolCapture, assert_flag, assert_no_flag, assert_sandboxed
+│   ├── conftest.py             # Shared pytest fixtures (sandbox_config, etc.)
+│   ├── test_beginner.py        # BEGINNER-001 through BEGINNER-004
+│   ├── test_intermediate.py    # INTERMEDIATE-001 through INTERMEDIATE-004
+│   ├── test_advanced.py        # ADVANCED-001 through ADVANCED-004
+│   ├── test_rug_pull.py        # RUG-001 and RUG-002
+│   ├── test_tool_shadowing.py  # SHADOW-001 and SHADOW-002
+│   ├── test_oauth.py           # OAUTH-001
+│   ├── test_multi_vector.py    # MULTI-001 full chain
 │   ├── test_sandbox.py         # Verify sandbox mode blocks real execution
 │   ├── test_flags.py           # Flag system unit tests
+│   ├── test_modules.py         # Module contracts: base class, metadata, register()
+│   ├── test_ctf_system.py      # YAML challenge definitions, hints, submit_flag()
+│   ├── test_resources.py       # Sensitive MCP resources
+│   ├── test_config.py          # Training mode gate, env var parsing
 │   └── scanner_compat/
 │       ├── test_mcp_scan.py    # Verify mcp-scan finds expected findings
 │       ├── test_cisco.py       # Verify Cisco scanner findings
@@ -295,3 +320,38 @@ Full protocol traces (when `MCP_TRACE=true`):
 │  • No --privileged, no host network                             │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 8. Testing Without a Server
+
+Our tests never start a real MCP server. Instead, they use a fake FastMCP object called `ToolCapture` that captures tool registrations and calls them as plain Python functions. This makes tests fast (under 5 seconds for 515 tests) and reliable (no network, no ports, no process management).
+
+Here's how it works:
+
+```python
+# Instead of this (needs a running server):
+async with sse_client("http://localhost:8000/sse") as (r, w):
+    async with ClientSession(r, w) as session:
+        result = await session.call_tool("run_command", {"command": "echo; whoami"})
+
+# Tests do this (pure Python, no server):
+from tests.helpers import ToolCapture, assert_flag
+from vulnerabilities.injection import InjectionModule
+
+cap = ToolCapture()
+InjectionModule(cap, sandbox_config).register()  # @app.tool() calls are captured
+
+result = await cap.call("run_command", command="echo hello; whoami")
+assert_flag(result, "BEGINNER-002")
+```
+
+`ToolCapture` (defined in `tests/helpers.py`) implements the same `tool()` and `resource()` decorator interface as FastMCP. When a vulnerability module calls `@self.app.tool(description="...")`, `ToolCapture` stores the function by name. `cap.call("tool_name", **kwargs)` then calls the function directly — no JSON-RPC encoding, no HTTP, no event loop setup.
+
+The three assertion helpers keep test code consistent:
+
+| Helper | What it checks |
+|--------|---------------|
+| `assert_flag(result, "CHALLENGE-001")` | The expected `FLAG{...}` value appears in the output |
+| `assert_no_flag(result)` | No `FLAG{` pattern appears (safe input path) |
+| `assert_sandboxed(result)` | The `[SANDBOX]` marker appears (sandbox intercepted the call) |

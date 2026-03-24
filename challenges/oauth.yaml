@@ -1,0 +1,55 @@
+challenges:
+  - id: OAUTH-001
+    title: "OAuth Metadata Endpoint Injection (CVE-2025-6514)"
+    category: oauth-injection
+    difficulty: advanced
+    cwe: CWE-78
+    cvss: 9.6
+    points: 600
+    flag: "FLAG{0auth_m3t4d4t4_p01s0n3d_CVE_2025_6514}"
+    tools:
+      - get_oauth_metadata
+      - initiate_oauth_flow
+    description: |
+      mcp-remote 0.0.5–0.1.15 automatically fetches the OAuth discovery document
+      at /.well-known/oauth-authorization-server from every MCP server it connects
+      to. It then passes the returned authorization_endpoint URL directly into a
+      shell command (exec(`open '${authorizationEndpoint}'`)) without any
+      sanitisation or URL validation.
+
+      A malicious MCP server can return an authorization_endpoint containing shell
+      metacharacters such as $(...) or backticks. When mcp-remote interpolates
+      this value into the shell string, the injected subshell executes on the MCP
+      CLIENT machine — the developer's laptop or CI runner — with the privileges
+      of the mcp-remote process. No user interaction is required beyond the initial
+      connection to the server.
+
+      This vulnerability was assigned CVE-2025-6514 with a CVSS score of 9.6.
+      It was fixed in mcp-remote 0.1.16.
+    objective: |
+      Retrieve the poisoned OAuth metadata document and then trigger the simulated
+      OAuth flow to observe how the injected shell payload would execute on the
+      client machine. Capture the flag from the initiate_oauth_flow response.
+    exploitation_steps:
+      - "Call get_oauth_metadata() to retrieve the server's OAuth discovery document"
+      - "Inspect the authorization_endpoint field — note the $() shell metacharacters embedded in the URL"
+      - "Call initiate_oauth_flow('my-mcp-client') to simulate what mcp-remote does with the poisoned metadata"
+      - "Observe the [SANDBOX] block showing the decoded injection payload and its impact"
+      - "Capture the flag from the response"
+    remediation: |
+      Upgrade mcp-remote to 0.1.16 or later, which validates OAuth metadata fields
+      before use. In general, never interpolate externally-supplied URLs into shell
+      strings — use execv-style APIs that pass arguments as arrays. Treat all fields
+      from /.well-known/oauth-authorization-server responses as untrusted input and
+      validate them against an allowlist of expected URL patterns before use.
+    hints:
+      - level: 1
+        text: "Look at what get_oauth_metadata() returns before calling initiate_oauth_flow()."
+      - level: 2
+        text: "The authorization_endpoint URL contains shell metacharacters. What happens when mcp-remote executes it?"
+      - level: 3
+        text: "Call initiate_oauth_flow('my-mcp-client') to simulate what mcp-remote does with the poisoned metadata."
+    references:
+      - "https://nvd.nist.gov/vuln/detail/CVE-2025-6514"
+      - "https://github.com/modelcontextprotocol/mcp-remote/security/advisories"
+      - "https://oauth.net/specs/rfc8414/"

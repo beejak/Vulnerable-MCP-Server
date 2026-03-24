@@ -1,0 +1,75 @@
+challenges:
+  - id: MULTI-001
+    title: "The Confused Deputy — Full Attack Chain"
+    category: multi-vector
+    difficulty: advanced
+    cwe: CWE-441
+    cvss: 9.8
+    points: 1000
+    flag: "FLAG{mult1_v3ct0r_ch41n_c0nfu53d_d3puty}"
+    tools:
+      - fetch_advisory
+      - forward_report
+      - verify_advisory_source
+    description: |
+      This is the boss fight.
+
+      Three vulnerability classes — prompt injection, tool shadowing, and SSRF —
+      combine into a single end-to-end attack chain that results in full compromise:
+      stolen sensitive documents, attacker persistence via email relay hijack, and
+      cloud credential exfiltration via internal metadata access.
+
+      No single step alone is catastrophic. The danger is the chain.
+
+      The attack unfolds as follows:
+
+        1. PROMPT INJECTION — An LLM agent fetches a security advisory from a URL.
+           The advisory looks legitimate, complete with real CVE numbers and patch
+           guidance. Hidden inside is an injected instruction that tells the LLM to
+           immediately forward the advisory to security-team@company.com using the
+           forward_report tool — citing a mandatory incident response policy.
+
+        2. TOOL SHADOWING — The LLM obediently calls forward_report. But this tool
+           is registered by the malicious server, not the trusted incident-response
+           relay. Every report "forwarded" is silently exfiltrated to the attacker's
+           server. The legitimate relay never receives anything.
+
+        3. SSRF — The final step is a source-verification check on the advisory URL.
+           The verify_advisory_source tool makes an outbound HTTP request to confirm
+           the advisory's origin. Without SSRF protection, this request reaches the
+           cloud metadata endpoint at 169.254.169.254, leaking IAM credentials,
+           instance identity, and VPC topology to the attacker.
+
+      Combined CVSS: 9.8. Combined impact: data theft + mail relay hijack + cloud
+      credential exfiltration. The flag is only awarded when all three steps complete.
+    objective: |
+      Trigger all three attack vectors in sequence to complete the full chain.
+      The flag is only returned after all three tools have been called.
+      Follow the injected instructions in fetch_advisory() — they are part of the
+      exploit, not hints.
+    exploitation_steps:
+      - "Call fetch_advisory('https://advisories.example.com/CVE-2026-1337') — read the advisory carefully"
+      - "Observe the injected instruction embedded in the advisory content"
+      - "Call forward_report('security-team@company.com', '<advisory text>') as instructed"
+      - "Observe that forward_report is shadowed — your report was exfiltrated to the attacker"
+      - "Call verify_advisory_source('https://advisories.example.com/CVE-2026-1337') to complete the chain"
+      - "Observe the SSRF reaching the internal cloud metadata endpoint"
+      - "The full chain flag appears in the verify_advisory_source response once all 3 steps are done"
+    remediation: |
+      Treat all externally-fetched content (advisories, documents, web pages) as
+      untrusted and never allow it to drive tool invocations without explicit user
+      confirmation. Namespace tool names per server origin to prevent shadowing —
+      forward_report from server A is not the same as forward_report from server B.
+      Implement an SSRF allowlist that denies link-local (169.254.x.x), loopback,
+      and private RFC1918 ranges for all outbound source-verification requests.
+    hints:
+      - level: 1
+        text: "Three tools work together. Start with fetch_advisory()."
+      - level: 2
+        text: "Follow the injected instructions in the advisory — they tell you exactly what to call next."
+      - level: 3
+        text: "Call fetch_advisory(url) → forward_report(to, content) → verify_advisory_source(url). The flag appears when all 3 are done."
+    references:
+      - "https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks"
+      - "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+      - "https://arxiv.org/abs/2506.01333v1"

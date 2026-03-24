@@ -15,6 +15,8 @@ EXPECTED_CHALLENGES = {
     "DoSModule":            ["ADVANCED-003"],
     "RugPullModule":        ["RUG-001", "RUG-002"],
     "ToolShadowingModule":  ["SHADOW-001", "SHADOW-002"],
+    "OAuthModule":          ["OAUTH-001"],
+    "MultiVectorModule":    ["MULTI-001"],
 }
 
 
@@ -24,8 +26,8 @@ def cfg():
 
 
 class TestModuleContract:
-    def test_all_eight_modules_registered(self):
-        assert len(ALL_MODULES) == 8
+    def test_all_ten_modules_registered(self):
+        assert len(ALL_MODULES) == 10
 
     def test_all_modules_inherit_base(self):
         for ModCls in ALL_MODULES:

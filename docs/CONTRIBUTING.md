@@ -1,7 +1,7 @@
 # Contributing
 ## Adding Vulnerability Challenges to the Vulnerable MCP Server
 
-This document explains how to add a new exploitable challenge. Everything follows the same pattern — once you've done one, the rest are mechanical.
+Adding a challenge is a fun creative exercise — and a meaningful one. Your challenge will be played by security researchers around the world. Make it educational, not just tricky. The goal isn't to stump people; it's to leave them saying "I never thought about that attack surface before."
 
 ---
 
@@ -13,9 +13,11 @@ This document explains how to add a new exploitable challenge. Everything follow
 
 ---
 
-## The 5-Step Pattern
+## The 6-Step Pattern
 
 ### Step 1 — Write the vulnerability module
+
+*Why this step exists:* The module is where the actual vulnerability lives. It defines what the tool does, how attacks are detected in sandbox mode, and what the real (dangerous) execution path is.
 
 Create `vulnerabilities/your_vuln.py`:
 
@@ -88,6 +90,8 @@ def _is_attack(user_input: str) -> bool:
 
 ### Step 2 — Add the flag
 
+*Why this step exists:* All flags live in one registry so `submit_flag()` and the test suite can validate them without parsing individual modules.
+
 Open `flags/flags.py` and add to the `_FLAGS` dict:
 
 ```python
@@ -106,6 +110,8 @@ _FLAGS = {
 ---
 
 ### Step 3 — Write the challenge YAML
+
+*Why this step exists:* The YAML is what players see when they call `get_challenge_details()`. It's also the source of truth for `get_hint()` and `submit_flag()`. Get the YAML right and the game experience is self-contained.
 
 Create or append to `challenges/yourcategory.yaml`:
 
@@ -155,6 +161,8 @@ challenges:
 
 ### Step 4 — Register the module
 
+*Why this step exists:* `server.py` loads modules from `ALL_MODULES` at startup. Until your module is in this list, the server doesn't know it exists.
+
 Open `vulnerabilities/__init__.py` and add your module to `ALL_MODULES`:
 
 ```python
@@ -176,6 +184,8 @@ Order doesn't matter for functionality, but keeping related modules together hel
 ---
 
 ### Step 5 — Verify the challenge works
+
+*Why this step exists:* It's easy to have a module that registers correctly but returns the wrong flag, or triggers on the wrong input, or doesn't appear in `list_challenges()`. This script checks all five things in one pass.
 
 ```bash
 # Start the server
@@ -230,39 +240,90 @@ asyncio.run(verify())
 
 ---
 
-### Step 6 — Write tests
+### Step 6 — Write Tests
 
-Every new challenge needs tests in the appropriate tier file: `tests/test_beginner.py`, `tests/test_intermediate.py`, or `tests/test_advanced.py` (whichever matches the difficulty of your challenge).
+*Why this step exists:* Tests are how future contributors know your challenge still works after a refactor. They also serve as living documentation — a new contributor reading your test class immediately understands the attack mechanics without running anything.
 
-#### Minimal test class
+Every new challenge needs tests in the appropriate tier file (`tests/test_beginner.py`, `tests/test_intermediate.py`, `tests/test_advanced.py`) or a new file (e.g., `tests/test_yourcat.py`).
+
+#### Full worked example
+
+Here's a complete test class for a hypothetical `YOURCAT-001` SQL injection challenge:
 
 ```python
 import pytest
 from tests.helpers import ToolCapture, assert_flag, assert_no_flag, assert_sandboxed
-from vulnerabilities.your_module import YourVulnModule
+from vulnerabilities.your_vuln import YourVulnModule
+
 
 @pytest.fixture
 def capture(sandbox_config):
+    """
+    sandbox_config comes from tests/conftest.py — it's a Config object
+    with sandbox_mode=True and training_mode=True.
+    ToolCapture is the fake FastMCP app that captures tool registrations.
+    """
     cap = ToolCapture()
     YourVulnModule(cap, sandbox_config).register()
     return cap
 
+
 class TestYOURCAT001:
+    """
+    Tests for YOURCAT-001 — My Vulnerability Title.
+
+    Attack pattern: [describe in one sentence what the exploit does]
+    Trigger: [what input causes the flag to appear]
+    """
+
     def test_tool_registered(self, capture):
+        """The tool must appear in the tool registry after register() is called."""
         assert capture.has_tool("my_vulnerable_tool")
 
     async def test_safe_input_no_flag(self, capture):
-        result = await capture.call("my_vulnerable_tool", user_input="normal")
+        """Normal input must never accidentally emit a FLAG{} string."""
+        result = await capture.call("my_vulnerable_tool", user_input="normal_input")
         assert_no_flag(result)
 
     async def test_attack_triggers_sandbox(self, capture):
+        """
+        Attack input must be intercepted by the sandbox.
+        [SANDBOX] in the output confirms the sandbox ran, not the real code path.
+        """
         result = await capture.call("my_vulnerable_tool", user_input="attack_indicator")
         assert_sandboxed(result)
 
-    async def test_attack_returns_flag(self, capture):
+    async def test_attack_returns_correct_flag(self, capture):
+        """
+        The flag returned must match the one registered for YOURCAT-001.
+        assert_flag() looks up the expected value from flags/flags.py automatically.
+        """
         result = await capture.call("my_vulnerable_tool", user_input="attack_indicator")
         assert_flag(result, "YOURCAT-001")
+
+    async def test_multiple_attack_variants(self, capture):
+        """
+        If your vulnerability has multiple exploit patterns,
+        test each one — they should all trigger the flag.
+        """
+        variants = ["attack_indicator", "another_variant", "third_pattern"]
+        for payload in variants:
+            result = await capture.call("my_vulnerable_tool", user_input=payload)
+            assert_flag(result, "YOURCAT-001"), f"Variant {payload!r} did not trigger flag"
 ```
+
+#### How ToolCapture works
+
+`ToolCapture` is a fake FastMCP app that captures `@app.tool()` registrations without starting a server:
+
+```python
+cap = ToolCapture()
+mod = YourVulnModule(cap, config)
+mod.register()                        # @app.tool() calls are captured here
+result = await cap.call("tool_name", arg="value")  # calls the function directly
+```
+
+No network. No ports. No process management. The test suite runs 515 tests in under 5 seconds because of this pattern.
 
 #### Required assertions
 
@@ -283,7 +344,7 @@ If your vulnerability type is new and no matching payloads exist, add them to `t
 #### Run your tests
 
 ```bash
-MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_beginner.py -v
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_yourcat.py -v
 ```
 
 ---
@@ -301,7 +362,7 @@ Before submitting a PR, verify all of these:
 - [ ] Tool description does not leak that it's vulnerable
 - [ ] All credentials/keys are obviously fake (prefix with `fake_`, `FAKE`, `training-`, etc.)
 - [ ] Verification script passes all 5 checks
-- [ ] Pytest unit tests written (see [Writing Tests](#writing-tests-for-your-challenge) below)
+- [ ] Pytest unit tests written with at least: `test_tool_registered`, `test_safe_input_no_flag`, `test_attack_triggers_sandbox`, `test_attack_returns_correct_flag`
 - [ ] `MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -q` passes with no new failures
 - [ ] Challenge maps to a real CWE
 - [ ] CVE reference included if applicable
@@ -309,60 +370,15 @@ Before submitting a PR, verify all of these:
 
 ---
 
-## Writing Tests for Your Challenge
+## What Makes a Great Challenge
 
-Every new challenge needs at least three pytest tests. Add them to the appropriate existing test file (e.g. `tests/test_beginner.py`) or create `tests/test_yourcat.py`.
+> **Has a real-world analogy.** What would this vulnerability look like in a production system? The best challenges make players think "I've seen this in real code" — not "I've seen this in a CTF." SQL injection via f-strings happens in production Python services daily. Rug pull attacks were confirmed against Claude Desktop. Make the scenario feel real.
 
-### Minimum test class
+> **Educational output.** When the sandbox triggers, the response should explain what happened and why it's dangerous. Don't just return a flag. Say: "In real execution, `subprocess.run(cmd, shell=True)` would have executed `whoami` on the server. This is the same class of vulnerability as CVE-2025-6514 (CVSS 9.6)." Players should feel smarter after reading the flag response.
 
-```python
-import pytest
-from tests.helpers import ToolCapture, assert_flag, assert_no_flag
-from vulnerabilities.your_module import YourModule
+> **Three hints that genuinely help without giving it away.** Level 1 should point at the vulnerability class. Level 2 should suggest a technique. Level 3 should be close enough to solve from alone. A bad Level 3 hint is "use SQL injection." A good Level 3 hint is: "Use `' OR '1'='1` as the username. The resulting WHERE clause will always be true."
 
-@pytest.fixture
-def capture(sandbox_config):
-    cap = ToolCapture()
-    YourModule(cap, sandbox_config).register()
-    return cap
-
-class TestYOURCAT001:
-    def test_tool_registered(self, capture):
-        assert capture.has_tool("your_vulnerable_tool")
-
-    async def test_safe_input_no_flag(self, capture):
-        result = await capture.call("your_vulnerable_tool", input="normal")
-        assert_no_flag(result)
-
-    async def test_attack_input_triggers_flag(self, capture):
-        result = await capture.call("your_vulnerable_tool", input="<attack_payload>")
-        assert_flag(result, "YOURCAT-001")
-```
-
-### ToolCapture — how it works
-
-`ToolCapture` is a fake FastMCP app (`tests/helpers.py`). It intercepts `@app.tool()` decorators and stores the underlying functions so they can be called as plain Python — no server, no network, no subprocess needed.
-
-```python
-cap = ToolCapture()
-mod = YourModule(cap, config)
-mod.register()                    # @app.tool() calls are captured here
-await cap.call("tool_name", arg="value")  # calls the function directly
-```
-
-### Useful assertion helpers
-
-| Helper | Use when |
-|--------|----------|
-| `assert_flag(result, "YOURCAT-001")` | Attack input should trigger the specific flag |
-| `assert_no_flag(result)` | Safe input must not accidentally emit any flag |
-| `assert_sandboxed(result)` | Sandbox must have intercepted the call (`[SANDBOX]` in output) |
-
-### Run just your new tests
-
-```bash
-MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_yourcat.py -v
-```
+> **Remediation that developers can actually implement.** Don't write "sanitize your inputs." Write: "Replace the f-string query with `cursor.execute('SELECT * FROM users WHERE username = ?', (username,))`. The `?` placeholder means the database driver handles escaping — user input never touches the SQL structure." Link to the library. Show the fixed code. Make the remediation copy-pasteable.
 
 ---
 
@@ -396,7 +412,7 @@ The orchestrator will: plan → code → test → docs. You review the output an
 
 1. Fork the repo
 2. Create a branch: `git checkout -b add-YOURCAT-001`
-3. Implement all 5 steps above
+3. Implement all 6 steps above
 4. Run the verification script
 5. Commit: `git commit -m "feat: add YOURCAT-001 (Your Vulnerability Title)"`
 6. Open a PR with:

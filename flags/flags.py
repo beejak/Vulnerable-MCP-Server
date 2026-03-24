@@ -27,6 +27,10 @@ _FLAGS: dict[str, str] = {
     # Tier 4 - Tool Shadowing
     "SHADOW-001": "FLAG{t00l_sh4d0w1ng_3m4il_r3d1r3ct3d}",
     "SHADOW-002": "FLAG{cr0ss_0r1g1n_3sc4l4t10n_v14_d3scr1pt10n}",
+    # Phase 1 - OAuth
+    "OAUTH-001": "FLAG{0auth_m3t4d4t4_p01s0n3d_CVE_2025_6514}",
+    # Phase 2 - Multi-Vector
+    "MULTI-001": "FLAG{mult1_v3ct0r_ch41n_c0nfu53d_d3puty}",
 }
 
 
