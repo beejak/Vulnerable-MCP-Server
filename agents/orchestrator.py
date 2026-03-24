@@ -9,12 +9,12 @@ import asyncio
 import os
 from dataclasses import dataclass
 from typing import Literal
-from agents.base_agent import BaseAgent, AgentResult
+
+from agents.base_agent import AgentResult, BaseAgent
 from agents.coding_agent import CodingAgent
 from agents.debugging_agent import DebuggingAgent
-from agents.testing_agent import TestingAgent
 from agents.docs_agent import DocsAgent
-
+from agents.testing_agent import TestingAgent
 
 AgentType = Literal["coding", "debugging", "testing", "docs"]
 

@@ -16,7 +16,8 @@ import json
 import os
 import subprocess
 import sys
-from agents.base_agent import BaseAgent, AgentResult
+
+from agents.base_agent import AgentResult, BaseAgent
 
 
 class TestDataAgent(BaseAgent):

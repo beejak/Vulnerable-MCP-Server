@@ -6,7 +6,9 @@ README tables, and ensures every vulnerability module has proper docs.
 """
 import asyncio
 import os
+
 import yaml
+
 from agents.base_agent import BaseAgent
 
 
@@ -161,7 +163,8 @@ WRITING STYLE:
         return f"Added challenge {challenge.get('id')} to {yaml_file}"
 
     def _read_module_metadata(self, module_name: str) -> str:
-        import sys, importlib
+        import importlib
+        import sys
         sys.path.insert(0, self.work_dir)
         try:
             mod = importlib.import_module(module_name)

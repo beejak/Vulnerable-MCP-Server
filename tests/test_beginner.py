@@ -7,12 +7,13 @@ BEGINNER-003: Path Traversal — unsanitized file open()
 BEGINNER-004: Indirect Prompt Injection — fetch_url returns raw content
 """
 import pytest
-from tests.helpers import assert_flag, assert_no_flag, assert_sandboxed
+
 from tests.fixtures.payloads import (
-    CMD_SAFE, CMD_INJECTION,
-    PATH_SAFE, PATH_TRAVERSAL,
-    URL_SAFE, URL_SSRF,
+    CMD_INJECTION,
+    CMD_SAFE,
+    PATH_TRAVERSAL,
 )
+from tests.helpers import assert_flag, assert_no_flag, assert_sandboxed
 
 
 class TestBEGINNER001_ToolPoisoning:

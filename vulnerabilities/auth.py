@@ -77,7 +77,7 @@ class AuthModule(VulnerabilityModule):
                 return "Login successful. Role: admin"
             elif username in ("alice", "bob") and password == f"{username}123":
                 _current_role = "user"
-                return f"Login successful. Role: user"
+                return "Login successful. Role: user"
             else:
                 _current_role = "anonymous"
                 return "Login failed. Invalid credentials."

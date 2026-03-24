@@ -7,7 +7,8 @@ Uses read_file, write_file, and list_files tools.
 """
 import asyncio
 import os
-from agents.base_agent import BaseAgent, AgentResult
+
+from agents.base_agent import BaseAgent
 
 
 class CodingAgent(BaseAgent):

@@ -1,6 +1,7 @@
 """Tests for the CTF flag registry."""
 import pytest
-from flags.flags import get_flag, check_flag, list_flags, _FLAGS
+
+from flags.flags import _FLAGS, check_flag, get_flag, list_flags
 
 ALL_IDS = list(_FLAGS.keys())
 

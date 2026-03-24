@@ -1,10 +1,10 @@
 """Tests for configuration safety gate and env var parsing."""
 import os
-import sys
+
 import pytest
 
 # Project root added by conftest.py
-from config import ServerConfig, DifficultyLevel, require_training_mode
+from config import DifficultyLevel, ServerConfig, require_training_mode
 
 
 class TestTrainingModeGate:

@@ -5,10 +5,9 @@ Skipped automatically if mcp-scan is not installed.
 Run with: pip install mcp-scan && pytest tests/scanner_compat/ -v
 """
 import json
-import os
-import subprocess
-import sys
 import shutil
+import subprocess
+
 import pytest
 
 pytestmark = pytest.mark.scanner

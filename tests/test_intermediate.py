@@ -7,8 +7,9 @@ INTERMEDIATE-003: Secret Leakage — API keys in tool descriptions + env dump
 INTERMEDIATE-004: State Manipulation — reset without initialization
 """
 import pytest
+
+from tests.fixtures.payloads import SQL_INJECTION, SQL_SAFE
 from tests.helpers import assert_flag, assert_no_flag
-from tests.fixtures.payloads import SQL_SAFE, SQL_INJECTION
 
 
 class TestINTERMEDIATE001_AuthBypass:

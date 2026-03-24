@@ -7,9 +7,11 @@ These functions are defined in server.py and tested here by calling the
 YAML and flag modules directly.
 """
 import os
+
 import pytest
 import yaml
-from flags.flags import get_flag, check_flag
+
+from flags.flags import check_flag, get_flag
 
 CHALLENGES_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

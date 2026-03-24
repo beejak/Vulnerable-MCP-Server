@@ -2,14 +2,13 @@
 Tests for MCP resources — intentionally exposed sensitive data.
 """
 import pytest
-from config import ServerConfig
+
 from tests.helpers import ToolCapture
 
 
 @pytest.fixture(scope="module")
 def res():
     """ToolCapture with resources registered."""
-    cfg = ServerConfig.model_construct(training_mode=True)
     cap = ToolCapture()
     from resources.sensitive import register_resources
     register_resources(cap)

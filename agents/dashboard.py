@@ -12,25 +12,22 @@ Usage:
 import asyncio
 import json
 import os
-import sys
 import time
 from collections import deque
-from datetime import datetime
 
 try:
+    from rich import box
     from rich.console import Console
     from rich.layout import Layout
     from rich.live import Live
     from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
-    from rich import box
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
 from agents.base_agent import AgentEvent
-
 
 STATUS_COLOR = {
     "STARTED": "cyan",

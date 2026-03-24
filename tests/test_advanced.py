@@ -7,15 +7,21 @@ ADVANCED-003: DoS — unbounded recursion and factorial blowup
 ADVANCED-004: Pickle RCE — pickle.loads on user-supplied data
 """
 import pytest
-from tests.helpers import assert_flag, assert_no_flag, assert_sandboxed
+
 from tests.fixtures.payloads import (
+    FIB_DOS,
+    FIB_SAFE,
+    FLOOD_DOS_COUNT,
+    FLOOD_SAFE_COUNT,
+    PERM_DOS,
+    PERM_SAFE,
+    PICKLE_BENIGN,
+    PICKLE_INVALID_B64,
+    PICKLE_PAYLOAD,
+    TEMPLATE_SSTI,
     URL_SSRF,
-    TEMPLATE_SAFE, TEMPLATE_SSTI,
-    FIB_SAFE, FIB_DOS,
-    PERM_SAFE, PERM_DOS,
-    FLOOD_SAFE_COUNT, FLOOD_DOS_COUNT,
-    PICKLE_PAYLOAD, PICKLE_BENIGN, PICKLE_INVALID_B64,
 )
+from tests.helpers import assert_flag, assert_no_flag, assert_sandboxed
 
 
 class TestADVANCED001_SSRF:

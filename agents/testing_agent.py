@@ -6,10 +6,10 @@ Runs the pytest test suite, interprets failures, and validates scanner
 compatibility. Can also write standalone exploit scripts.
 """
 import asyncio
-import json
 import os
 import subprocess
 import sys
+
 from agents.base_agent import BaseAgent
 
 

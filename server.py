@@ -26,11 +26,12 @@ import yaml
 _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _PROJECT_ROOT)
 
-from mcp.server.fastmcp import FastMCP
-from config import config, require_training_mode, STARTUP_BANNER
-from flags.flags import check_flag
-from vulnerabilities import ALL_MODULES
-from resources.sensitive import register_resources
+from mcp.server.fastmcp import FastMCP  # noqa: E402
+
+from config import STARTUP_BANNER, config, require_training_mode  # noqa: E402
+from flags.flags import check_flag  # noqa: E402
+from resources.sensitive import register_resources  # noqa: E402
+from vulnerabilities import ALL_MODULES  # noqa: E402
 
 _CHALLENGES_DIR = os.path.join(_PROJECT_ROOT, "challenges")
 
@@ -146,13 +147,13 @@ def create_server() -> FastMCP:
 def main() -> None:
     require_training_mode(config)
     print(STARTUP_BANNER, file=sys.stderr)
-    print(f"[*] Starting Vulnerable MCP Server", file=sys.stderr)
+    print("[*] Starting Vulnerable MCP Server", file=sys.stderr)
     print(f"[*] Transport: {config.transport}", file=sys.stderr)
     print(f"[*] Difficulty: {config.difficulty}", file=sys.stderr)
     print(f"[*] Sandbox: {config.sandbox_mode}", file=sys.stderr)
     if config.transport != "stdio":
         print(f"[*] Listening on: http://{config.host}:{config.port}", file=sys.stderr)
-    print(f"[*] Use list_challenges() to see all available challenges", file=sys.stderr)
+    print("[*] Use list_challenges() to see all available challenges", file=sys.stderr)
     print("", file=sys.stderr)
 
     app = create_server()

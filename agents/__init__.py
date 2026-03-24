@@ -13,12 +13,12 @@ Usage:
     import asyncio
     asyncio.run(run_with_dashboard("Implement OAUTH-001 challenge"))
 """
-from agents.orchestrator import OrchestratorAgent
 from agents.coding_agent import CodingAgent
-from agents.debugging_agent import DebuggingAgent
-from agents.testing_agent import TestingAgent
-from agents.docs_agent import DocsAgent
 from agents.dashboard import AgentDashboard, run_with_dashboard
+from agents.debugging_agent import DebuggingAgent
+from agents.docs_agent import DocsAgent
+from agents.orchestrator import OrchestratorAgent
+from agents.testing_agent import TestingAgent
 
 __all__ = [
     "OrchestratorAgent",

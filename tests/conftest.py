@@ -16,8 +16,9 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-import pytest
-from tests.helpers import ToolCapture
+import pytest  # noqa: E402
+
+from tests.helpers import ToolCapture  # noqa: E402
 
 
 @pytest.fixture(scope="session")

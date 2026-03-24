@@ -1,9 +1,10 @@
 """Tests for the VulnerabilityModule contract — every module must honour it."""
 import pytest
-from vulnerabilities import ALL_MODULES
-from vulnerabilities.base import VulnerabilityModule, VulnerabilityMeta
+
 from config import ServerConfig
 from tests.helpers import ToolCapture
+from vulnerabilities import ALL_MODULES
+from vulnerabilities.base import VulnerabilityMeta, VulnerabilityModule
 
 EXPECTED_CHALLENGES = {
     "ToolPoisoningModule": ["BEGINNER-001"],

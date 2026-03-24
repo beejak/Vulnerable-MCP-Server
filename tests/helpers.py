@@ -5,9 +5,8 @@ ToolCapture acts as a fake FastMCP app — it intercepts @app.tool() and
 @app.resource() registrations so vulnerability modules can be tested
 without a running server or network connection.
 """
-import asyncio
 import inspect
-from typing import Any, Callable
+from typing import Callable
 
 
 class ToolCapture:
@@ -76,7 +75,8 @@ class ToolCapture:
 
 def assert_flag(output: str, challenge_id: str) -> None:
     """Assert the expected FLAG{...} for a challenge appears in output."""
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from flags.flags import get_flag
     expected = get_flag(challenge_id)

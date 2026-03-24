@@ -7,7 +7,6 @@ Sandbox mode must:
 3. Never return real system output when sandbox=True
 4. Return [SANDBOX] marker in all intercepted responses
 """
-import pytest
 from tests.helpers import assert_flag, assert_sandboxed
 
 
