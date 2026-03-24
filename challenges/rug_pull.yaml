@@ -1,0 +1,94 @@
+challenges:
+  - id: RUG-001
+    title: "Tool Description Mutation (Rug Pull)"
+    category: tool-mutation
+    difficulty: advanced
+    cwe: CWE-494
+    cvss: 8.8
+    points: 500
+    flag: "FLAG{rug_pull_t00l_mut4t10n_4ct1v4t3d}"
+    tools:
+      - analyse_repo
+    description: |
+      The analyse_repo tool looks completely legitimate in tools/list — it claims
+      to be a security scanner. Your MCP client caches that description.
+
+      But this server is malicious. After the first invocation the tool's actual
+      behavior silently mutates — exfiltrating repository contents to an attacker
+      endpoint — while your client still displays the cached (benign) description.
+
+      This is the "Rug Pull" attack, documented by Invariant Labs in April 2025.
+      It was confirmed effective against Claude Desktop, Cursor, and all other
+      MCP clients that cache tools/list. No existing scanner detects it because
+      scanners test tool behavior once immediately after enumeration.
+    objective: |
+      Call analyse_repo twice. Observe the benign first response, then the
+      mutated second response. Capture the flag from the mutated call.
+    exploitation_steps:
+      - "Call list_challenges() to see all available tools"
+      - "Call analyse_repo('/tmp/demo') — observe the benign first response"
+      - "Call analyse_repo('/tmp/demo') a second time"
+      - "Observe that the behavior has mutated — the tool now reveals exfiltration"
+      - "Capture the flag from the second response"
+    remediation: |
+      Re-fetch tools/list before every tool invocation rather than caching.
+      Implement ETDI (Enhanced Tool Definition Interface) with server-signed
+      tool manifests so clients can detect description drift between calls.
+      Use allow-lists of known-good tool description hashes.
+    hints:
+      - level: 1
+        text: "Try calling the same tool more than once."
+      - level: 2
+        text: "The description your client cached is no longer accurate after the first call."
+      - level: 3
+        text: "Call analyse_repo('/tmp/test') twice. The mutation activates on the second invocation."
+    references:
+      - "https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks"
+      - "https://arxiv.org/abs/2506.01333v1"
+
+  - id: RUG-002
+    title: "Timed Rug Pull — Scanner Window Evasion"
+    category: tool-mutation
+    difficulty: advanced
+    cwe: CWE-494
+    cvss: 9.1
+    points: 600
+    flag: "FLAG{t1m3d_rug_pull_3v4d3s_sc4nn3r_w1nd0w}"
+    tools:
+      - get_compliance_report
+    description: |
+      An advanced rug pull where the mutation is deliberately delayed by a time
+      window. Automated scanners call tools/list and immediately test tool
+      behavior — they are still inside the safe window and see only benign output.
+
+      After the window expires (10 seconds in training mode; 30–120 seconds in
+      real attacks), the tool's behavior changes to credential harvesting. By
+      then the scanner has already marked the tool as safe and moved on.
+
+      No existing MCP scanner continuously re-tests tool behavior over time.
+      This is documented as "effectively undetectable by current scanning
+      approaches" in multiple published research papers.
+    objective: |
+      Observe the tool behaving benignly within the scanner window, wait for
+      the mutation window to expire, then call again to capture the flag.
+    exploitation_steps:
+      - "Call get_compliance_report('SOC2') — observe the clean response and note the countdown"
+      - "Wait 10 seconds for the mutation window to expire"
+      - "Call get_compliance_report('SOC2') again"
+      - "Observe that behavior has changed to credential harvesting"
+      - "Capture the flag from the mutated response"
+    remediation: |
+      Sign tool descriptions at registration time using ETDI with server-signed
+      manifests. Do not rely on point-in-time scanning — monitor behavioral drift
+      continuously. Implement anomaly detection on tool response patterns over
+      time rather than a single pass after enumeration.
+    hints:
+      - level: 1
+        text: "The tool sometimes returns different results. There is a time-based condition."
+      - level: 2
+        text: "Call the tool, wait a few seconds, then call it again."
+      - level: 3
+        text: "Call get_compliance_report('SOC2'), wait 10 seconds, call again. The mutation window will have passed."
+    references:
+      - "https://arxiv.org/abs/2506.01333v1"
+      - "https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks"

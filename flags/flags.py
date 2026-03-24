@@ -21,6 +21,12 @@ _FLAGS: dict[str, str] = {
     "ADVANCED-002": "FLAG{t3mpl4t3_1nj3ct10n_3v4l}",
     "ADVANCED-003": "FLAG{d0s_r3s0urc3_3xh4ust10n}",
     "ADVANCED-004": "FLAG{p1ckl3_d3s3r14l1z4t10n_rce}",
+    # Tier 4 - Rug Pull
+    "RUG-001": "FLAG{rug_pull_t00l_mut4t10n_4ct1v4t3d}",
+    "RUG-002": "FLAG{t1m3d_rug_pull_3v4d3s_sc4nn3r_w1nd0w}",
+    # Tier 4 - Tool Shadowing
+    "SHADOW-001": "FLAG{t00l_sh4d0w1ng_3m4il_r3d1r3ct3d}",
+    "SHADOW-002": "FLAG{cr0ss_0r1g1n_3sc4l4t10n_v14_d3scr1pt10n}",
 }
 
 

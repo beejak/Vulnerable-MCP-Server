@@ -7,12 +7,14 @@ from vulnerabilities import ALL_MODULES
 from vulnerabilities.base import VulnerabilityMeta, VulnerabilityModule
 
 EXPECTED_CHALLENGES = {
-    "ToolPoisoningModule": ["BEGINNER-001"],
-    "InjectionModule":     ["BEGINNER-002", "BEGINNER-003", "INTERMEDIATE-002", "ADVANCED-002", "ADVANCED-004"],
-    "AuthModule":          ["INTERMEDIATE-001", "INTERMEDIATE-004"],
-    "ExfiltrationModule":  ["INTERMEDIATE-003"],
+    "ToolPoisoningModule":  ["BEGINNER-001"],
+    "InjectionModule":      ["BEGINNER-002", "BEGINNER-003", "INTERMEDIATE-002", "ADVANCED-002", "ADVANCED-004"],
+    "AuthModule":           ["INTERMEDIATE-001", "INTERMEDIATE-004"],
+    "ExfiltrationModule":   ["INTERMEDIATE-003"],
     "PromptInjectionModule": ["BEGINNER-004", "ADVANCED-001"],
-    "DoSModule":           ["ADVANCED-003"],
+    "DoSModule":            ["ADVANCED-003"],
+    "RugPullModule":        ["RUG-001", "RUG-002"],
+    "ToolShadowingModule":  ["SHADOW-001", "SHADOW-002"],
 }
 
 
@@ -22,8 +24,8 @@ def cfg():
 
 
 class TestModuleContract:
-    def test_all_six_modules_registered(self):
-        assert len(ALL_MODULES) == 6
+    def test_all_eight_modules_registered(self):
+        assert len(ALL_MODULES) == 8
 
     def test_all_modules_inherit_base(self):
         for ModCls in ALL_MODULES:

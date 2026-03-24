@@ -16,7 +16,9 @@ from vulnerabilities.dos import DoSModule
 from vulnerabilities.exfiltration import ExfiltrationModule
 from vulnerabilities.injection import InjectionModule
 from vulnerabilities.prompt_injection import PromptInjectionModule
+from vulnerabilities.rug_pull import RugPullModule
 from vulnerabilities.tool_poisoning import ToolPoisoningModule
+from vulnerabilities.tool_shadowing import ToolShadowingModule
 
 ALL_MODULES = [
     ToolPoisoningModule,    # BEGINNER-001
@@ -25,6 +27,8 @@ ALL_MODULES = [
     ExfiltrationModule,     # INTERMEDIATE-003
     PromptInjectionModule,  # BEGINNER-004, ADVANCED-001
     DoSModule,              # ADVANCED-003
+    RugPullModule,          # RUG-001/002
+    ToolShadowingModule,    # SHADOW-001/002
 ]
 
 __all__ = ["ALL_MODULES"]
