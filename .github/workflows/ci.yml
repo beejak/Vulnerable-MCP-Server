@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["claude/kind-wiles", "claude/**"]
+    branches: ["main", "claude/**"]
   pull_request:
-    branches: ["claude/kind-wiles"]
+    branches: ["main"]
 
 jobs:
   test:
