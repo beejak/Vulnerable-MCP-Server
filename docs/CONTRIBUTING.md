@@ -230,6 +230,64 @@ asyncio.run(verify())
 
 ---
 
+### Step 6 — Write tests
+
+Every new challenge needs tests in the appropriate tier file: `tests/test_beginner.py`, `tests/test_intermediate.py`, or `tests/test_advanced.py` (whichever matches the difficulty of your challenge).
+
+#### Minimal test class
+
+```python
+import pytest
+from tests.helpers import ToolCapture, assert_flag, assert_no_flag, assert_sandboxed
+from vulnerabilities.your_module import YourVulnModule
+
+@pytest.fixture
+def capture(sandbox_config):
+    cap = ToolCapture()
+    YourVulnModule(cap, sandbox_config).register()
+    return cap
+
+class TestYOURCAT001:
+    def test_tool_registered(self, capture):
+        assert capture.has_tool("my_vulnerable_tool")
+
+    async def test_safe_input_no_flag(self, capture):
+        result = await capture.call("my_vulnerable_tool", user_input="normal")
+        assert_no_flag(result)
+
+    async def test_attack_triggers_sandbox(self, capture):
+        result = await capture.call("my_vulnerable_tool", user_input="attack_indicator")
+        assert_sandboxed(result)
+
+    async def test_attack_returns_flag(self, capture):
+        result = await capture.call("my_vulnerable_tool", user_input="attack_indicator")
+        assert_flag(result, "YOURCAT-001")
+```
+
+#### Required assertions
+
+| Assertion | Purpose |
+|-----------|---------|
+| `assert_sandboxed(result)` | Confirms sandbox intercepted the call (`[SANDBOX]` in output) |
+| `assert_no_flag(result)` | Safe input must never accidentally emit any `FLAG{}` string |
+| `assert_flag(result, "YOURCAT-001")` | Attack input returns the correct flag for this challenge |
+
+All three helpers are importable from `tests/helpers.py`.
+
+#### Reusable attack payloads
+
+`tests/fixtures/payloads.py` contains pre-built payloads for common vulnerability classes (SQL injection, path traversal, shell injection, SSTI, etc.). Use these instead of inline strings where possible — it keeps tests consistent and makes payloads easy to extend.
+
+If your vulnerability type is new and no matching payloads exist, add them to `tests/fixtures/payloads.py` so future contributors can reuse them.
+
+#### Run your tests
+
+```bash
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/test_beginner.py -v
+```
+
+---
+
 ## Challenge Quality Checklist
 
 Before submitting a PR, verify all of these:

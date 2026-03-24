@@ -17,9 +17,10 @@ This guide covers every operational aspect of the server. For the game-style wal
 8. [Using the Agent Build System](#8-using-the-agent-build-system)
 9. [Adding Your Own Challenge](#9-adding-your-own-challenge)
 10. [Running Scanners](#10-running-scanners)
-11. [Docker Reference](#11-docker-reference)
-12. [Environment Variable Reference](#12-environment-variable-reference)
-13. [Running the Test Suite](#13-running-the-test-suite)
+11. [Testing](#11-testing)
+12. [Docker Reference](#12-docker-reference)
+13. [Environment Variable Reference](#13-environment-variable-reference)
+14. [Running the Test Suite](#14-running-the-test-suite)
 
 ---
 
@@ -745,7 +746,86 @@ diff baseline.json new_scan.json
 
 ---
 
-## 11. Docker Reference
+## 11. Testing
+
+Tests don't require a running server. The `ToolCapture` helper in `tests/helpers.py` intercepts `@app.tool()` registrations so every vulnerability module can be called as plain Python — no network, no subprocess.
+
+### Install test dependencies
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Run the full suite
+
+```bash
+MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -q
+```
+
+### Run a specific test file
+
+```bash
+python -m pytest tests/test_beginner.py -v
+```
+
+### Skip slow / scanner tests
+
+```bash
+python -m pytest tests/ --ignore=tests/scanner_compat -q
+```
+
+### Test markers
+
+| Marker | Selects |
+|--------|---------|
+| `sandbox` | Verify sandbox blocks real execution |
+| `exploit` | Verify attack input triggers a flag |
+| `ctf` | CTF flag/hint/challenge system |
+| `scanner` | Requires external scanner (mcp-scan, etc.) |
+| `slow` | Tests that take > 2 seconds |
+
+Filter by marker: `pytest -m sandbox`
+
+### Test directory map
+
+| File | Covers |
+|------|--------|
+| `tests/test_beginner.py` | BEGINNER-001 through BEGINNER-004 |
+| `tests/test_intermediate.py` | INTERMEDIATE-001 through INTERMEDIATE-004 |
+| `tests/test_advanced.py` | ADVANCED-001 through ADVANCED-004 |
+| `tests/test_sandbox.py` | Sandbox intercepts every attack category |
+| `tests/test_ctf_system.py` | YAML challenge definitions, flag submission, hints |
+| `tests/test_resources.py` | Sensitive MCP resources expose expected data |
+| `tests/test_flags.py` | 12 flags present, correct format, uniqueness |
+| `tests/test_modules.py` | Module contracts: base class, metadata, register() |
+| `tests/test_config.py` | Training mode gate, env var parsing |
+| `tests/scanner_compat/` | mcp-scan integration (skipped if not installed) |
+
+### ToolCapture pattern
+
+Tests don't need a running server. `ToolCapture` (in `tests/helpers.py`) is a fake FastMCP app that intercepts `@app.tool()` decorators and stores the underlying functions so they can be called as plain Python. `tests/helpers.py` also exports `assert_flag`, `assert_no_flag`, and `assert_sandboxed` for consistent assertions across test files.
+
+```python
+from tests.helpers import ToolCapture, assert_flag
+from vulnerabilities.injection import InjectionModule
+
+cap = ToolCapture()
+mod = InjectionModule(cap, config)
+mod.register()
+
+result = await cap.call("run_command", command="echo hello; whoami")
+assert_flag(result, "BEGINNER-002")
+```
+
+### Coverage
+
+```bash
+python -m pytest tests/ --cov=. --cov-report=term-missing
+```
+
+---
+
+## 12. Docker Reference
 
 ### Service overview
 
@@ -803,7 +883,7 @@ These limits make `MCP_SANDBOX=false` safe inside Docker — DoS attacks exhaust
 
 ---
 
-## 12. Environment Variable Reference
+## 13. Environment Variable Reference
 
 Complete reference for every env var the server reads:
 
@@ -833,7 +913,7 @@ Environment variables override defaults. There is no config file — all configu
 
 ---
 
-## 13. Running the Test Suite
+## 14. Running the Test Suite
 
 The test suite has **346 tests** covering all 12 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
 
