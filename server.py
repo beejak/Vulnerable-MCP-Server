@@ -42,8 +42,10 @@ def _find_challenge(challenge_id: str) -> dict | None:
     for fname in os.listdir(_CHALLENGES_DIR):
         if not fname.endswith(".yaml"):
             continue
-        with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
+        with open(os.path.join(_CHALLENGES_DIR, fname), encoding="utf-8") as f:
             data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            continue
         for ch in data.get("challenges", []):
             if ch["id"] == challenge_id:
                 return ch

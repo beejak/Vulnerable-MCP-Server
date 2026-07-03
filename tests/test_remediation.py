@@ -37,36 +37,42 @@ class TestFixRegistry:
 
 
 @pytest.fixture(scope="module")
-def app_tools():
+def app():
     from server import create_server
-    app = create_server()
-    # FastMCP stores registered tools in a ToolManager; grab callables directly.
-    return {name: t.fn for name, t in app._tool_manager._tools.items()}
+    return create_server()
+
+
+async def _call(app, name: str, **kwargs) -> str:
+    """Invoke a tool through FastMCP's public call_tool() API and return its text."""
+    content, _ = await app.call_tool(name, kwargs)
+    return content[0].text
 
 
 class TestShowFixTool:
     """Exercises show_fix() through the real FastMCP server, not ToolCapture,
     since it needs both the YAML challenge lookup and the fix registry wired
-    together exactly as server.py assembles them."""
+    together exactly as server.py assembles them. Uses FastMCP's public
+    list_tools()/call_tool() API rather than reaching into ToolManager internals."""
 
-    def test_show_fix_registered(self, app_tools):
-        assert "show_fix" in app_tools
+    async def test_show_fix_registered(self, app):
+        tools = await app.list_tools()
+        assert "show_fix" in {t.name for t in tools}
 
-    def test_show_fix_known_challenge(self, app_tools):
-        result = app_tools["show_fix"]("BEGINNER-002")
+    async def test_show_fix_known_challenge(self, app):
+        result = await _call(app, "show_fix", challenge_id="BEGINNER-002")
         assert "VULNERABLE" in result
         assert "SECURE" in result
         assert "shell=True" in result
 
-    def test_show_fix_unknown_challenge(self, app_tools):
-        result = app_tools["show_fix"]("NOT-A-REAL-CHALLENGE")
+    async def test_show_fix_unknown_challenge(self, app):
+        result = await _call(app, "show_fix", challenge_id="NOT-A-REAL-CHALLENGE")
         assert "not found" in result.lower()
 
-    def test_get_hint_still_works_after_refactor(self, app_tools):
-        result = app_tools["get_hint"]("BEGINNER-001", 1)
+    async def test_get_hint_still_works_after_refactor(self, app):
+        result = await _call(app, "get_hint", challenge_id="BEGINNER-001", hint_level=1)
         assert "Hint 1 for BEGINNER-001" in result
 
-    def test_get_challenge_details_still_works_after_refactor(self, app_tools):
-        result = app_tools["get_challenge_details"]("BEGINNER-001")
+    async def test_get_challenge_details_still_works_after_refactor(self, app):
+        result = await _call(app, "get_challenge_details", challenge_id="BEGINNER-001")
         assert "BEGINNER-001" in result
         assert "Remediation:" in result
