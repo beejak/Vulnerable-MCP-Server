@@ -428,7 +428,8 @@ Vulnerable-MCP-Server/
     ├── USAGE.md                  # Full operational reference
     ├── CONTRIBUTING.md           # How to add challenges
     ├── ARCHITECTURE.md           # System design deep-dive
-    └── THREAT_MODEL.md           # CVE analysis and attack chains
+    ├── THREAT_MODEL.md           # CVE analysis and attack chains
+    └── LESSONS_LEARNED.md        # Running log of findings from building this repo
 ```
 
 ---
