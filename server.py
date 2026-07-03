@@ -30,10 +30,26 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 
 from config import STARTUP_BANNER, config, require_training_mode  # noqa: E402
 from flags.flags import check_flag  # noqa: E402
+from remediation.fixes import get_fix  # noqa: E402
 from resources.sensitive import register_resources  # noqa: E402
 from vulnerabilities import ALL_MODULES  # noqa: E402
 
 _CHALLENGES_DIR = os.path.join(_PROJECT_ROOT, "challenges")
+
+
+def _find_challenge(challenge_id: str) -> dict | None:
+    """Look up a single challenge's YAML entry by ID across all challenge files."""
+    for fname in os.listdir(_CHALLENGES_DIR):
+        if not fname.endswith(".yaml"):
+            continue
+        with open(os.path.join(_CHALLENGES_DIR, fname), encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            continue
+        for ch in data.get("challenges", []):
+            if ch["id"] == challenge_id:
+                return ch
+    return None
 
 
 def create_server() -> FastMCP:
@@ -92,18 +108,13 @@ def create_server() -> FastMCP:
 
     @app.tool(description="Get a hint for a specific challenge. hint_level: 1 (vague) to 3 (specific).")
     def get_hint(challenge_id: str, hint_level: int = 1) -> str:
-        for fname in os.listdir(_CHALLENGES_DIR):
-            if not fname.endswith(".yaml"):
-                continue
-            with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
-                data = yaml.safe_load(f)
-            for ch in data.get("challenges", []):
-                if ch["id"] == challenge_id:
-                    for h in ch.get("hints", []):
-                        if h["level"] == hint_level:
-                            return f"Hint {hint_level} for {challenge_id}:\n{h['text']}"
-                    return f"No hint at level {hint_level} for {challenge_id}. Try levels 1-3."
-        return f"Challenge '{challenge_id}' not found. Use list_challenges() to see all IDs."
+        ch = _find_challenge(challenge_id)
+        if ch is None:
+            return f"Challenge '{challenge_id}' not found. Use list_challenges() to see all IDs."
+        for h in ch.get("hints", []):
+            if h["level"] == hint_level:
+                return f"Hint {hint_level} for {challenge_id}:\n{h['text']}"
+        return f"No hint at level {hint_level} for {challenge_id}. Try levels 1-3."
 
     @app.tool(description="Submit a flag for a challenge to verify you solved it correctly.")
     def submit_flag(challenge_id: str, flag: str) -> str:
@@ -119,27 +130,44 @@ def create_server() -> FastMCP:
 
     @app.tool(description="Get full details, exploitation steps, and remediation for a challenge.")
     def get_challenge_details(challenge_id: str) -> str:
-        for fname in os.listdir(_CHALLENGES_DIR):
-            if not fname.endswith(".yaml"):
-                continue
-            with open(os.path.join(_CHALLENGES_DIR, fname)) as f:
-                data = yaml.safe_load(f)
-            for ch in data.get("challenges", []):
-                if ch["id"] == challenge_id:
-                    steps = "\n".join(
-                        f"  {i+1}. {s}"
-                        for i, s in enumerate(ch.get("exploitation_steps", []))
-                    )
-                    return (
-                        f"=== {ch['id']}: {ch['title']} ===\n\n"
-                        f"Category: {ch['category']} | Difficulty: {ch['difficulty'].upper()}\n"
-                        f"CWE: {ch['cwe']} | CVSS: {ch['cvss']} | Points: {ch['points']}\n\n"
-                        f"Description:\n{ch['description'].strip()}\n\n"
-                        f"Objective:\n{ch['objective'].strip()}\n\n"
-                        f"Exploitation Steps:\n{steps}\n\n"
-                        f"Remediation:\n{ch['remediation'].strip()}"
-                    )
-        return f"Challenge '{challenge_id}' not found."
+        ch = _find_challenge(challenge_id)
+        if ch is None:
+            return f"Challenge '{challenge_id}' not found."
+        steps = "\n".join(
+            f"  {i+1}. {s}"
+            for i, s in enumerate(ch.get("exploitation_steps", []))
+        )
+        return (
+            f"=== {ch['id']}: {ch['title']} ===\n\n"
+            f"Category: {ch['category']} | Difficulty: {ch['difficulty'].upper()}\n"
+            f"CWE: {ch['cwe']} | CVSS: {ch['cvss']} | Points: {ch['points']}\n\n"
+            f"Description:\n{ch['description'].strip()}\n\n"
+            f"Objective:\n{ch['objective'].strip()}\n\n"
+            f"Exploitation Steps:\n{steps}\n\n"
+            f"Remediation:\n{ch['remediation'].strip()}"
+        )
+
+    @app.tool(
+        description=(
+            "Learning Mode: show the exact vulnerable code pattern for a challenge "
+            "side-by-side with a secure rewrite and an explanation of why the fix works."
+        )
+    )
+    def show_fix(challenge_id: str) -> str:
+        ch = _find_challenge(challenge_id)
+        if ch is None:
+            return f"Challenge '{challenge_id}' not found. Use list_challenges() to see all IDs."
+        fix = get_fix(challenge_id)
+        if fix is None:
+            return f"No fix written yet for '{challenge_id}'."
+        return (
+            f"=== {ch['id']}: {ch['title']} — Vulnerable vs. Secure ===\n\n"
+            f"--- VULNERABLE (CWE: {ch['cwe']}, CVSS: {ch['cvss']}) ---\n"
+            f"{fix.vulnerable_code}\n\n"
+            f"+++ SECURE +++\n"
+            f"{fix.secure_code}\n\n"
+            f"Why this works:\n{fix.explanation}"
+        )
 
     return app
 

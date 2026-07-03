@@ -10,13 +10,13 @@
                               M C P   S E R V E R
 ```
 
-### The world's first deliberately vulnerable MCP server — built to teach AI security by breaking things.
+### A deliberately vulnerable MCP server for hands-on AI security training — capture flags, then see the fix.
 
 [![CI](https://github.com/beejak/Vulnerable-MCP-Server/actions/workflows/ci.yml/badge.svg?branch=claude%2Fkind-wiles)](https://github.com/beejak/Vulnerable-MCP-Server/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![18 Challenges](https://img.shields.io/badge/challenges-18-FF4444)](docs/GETTING_STARTED.md)
 [![Real CVEs](https://img.shields.io/badge/CVEs-mapped-FF6B35)](docs/THREAT_MODEL.md)
-[![515 Tests](https://img.shields.io/badge/tests-515%20passing-44BB44)](tests/)
+[![559 Tests](https://img.shields.io/badge/tests-559%20passing-44BB44)](tests/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
 **[🚀 Quick Start](#-quick-start) · [🗺️ Challenges](#️-challenges) · [🎮 How to Play](#-how-to-play) · [🏗️ Architecture](#️-architecture) · [🤝 Contributing](#-contributing)**
@@ -106,6 +106,7 @@ list_challenges()                         # See all 18 challenges + point values
 get_challenge_details("BEGINNER-001")     # Read the backstory
 get_hint("BEGINNER-001", 1)              # Get a nudge if you're stuck
 submit_flag("BEGINNER-001", "FLAG{...}") # Check your answer
+show_fix("BEGINNER-001")                 # Learning Mode: vulnerable code vs. the secure fix
 ```
 
 ---
@@ -197,8 +198,18 @@ Start at Beginner. Work up. The Expert tier has attacks that don't exist anywher
 │  4.  Find FLAG{...} in output    →  Copy it                    │
 │  5.  submit_flag(id, flag)       →  Confirm your score         │
 │  6.  get_hint(id, 1-3)           →  Stuck? Get a nudge         │
+│  7.  show_fix(id)                →  Learning Mode: see the fix │
 └────────────────────────────────────────────────────────────────┘
 ```
+
+### Learning Mode
+
+Capturing the flag only proves you found the bug. `show_fix(challenge_id)`
+goes one step further — it prints the exact vulnerable code pattern from the
+server's source next to a secure rewrite, plus a short explanation of why the
+fix closes the hole. Every one of the 18 challenges has one. This is the
+difference between "I found a broken tool" and "I know how to fix this in my
+own code."
 
 ### What Sandbox Mode Means
 
@@ -242,10 +253,10 @@ Want real execution for advanced research? That requires Docker and `MCP_SANDBOX
 │   │  🟡  prompt_injection   dos                                    │  │
 │   │  💀  rug_pull   tool_shadowing   oauth   multi_vector         │  │
 │   └───────────────────────────────────────────────────────────────┘  │
-│   ┌────────────────┐  ┌─────────────────┐  ┌──────────────────────┐  │
-│   │  flags/        │  │  challenges/    │  │  resources/          │  │
-│   │  18 flags      │  │  18 YAML files  │  │  fake credentials    │  │
-│   └────────────────┘  └─────────────────┘  └──────────────────────┘  │
+│   ┌──────────────┐ ┌───────────────┐ ┌────────────────┐ ┌──────────┐ │
+│   │  flags/      │ │  challenges/  │ │  remediation/  │ │resources/│ │
+│   │  18 flags    │ │  18 YAML      │ │  18 fix pairs  │ │fake creds│ │
+│   └──────────────┘ └───────────────┘ └────────────────┘ └──────────┘ │
 └──────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    Agent Build System  (optional)                     │
@@ -274,7 +285,9 @@ Every module extends `VulnerabilityModule`, registers tools via `@app.tool()`, a
 
 ## 🔬 For Security Researchers
 
-This server is designed to be a **named test target** for MCP security scanners.
+This server is built as a **compatibility test target** for MCP security scanners —
+useful for checking whether a scanner catches known-bad patterns, not an
+officially affiliated or endorsed target of any scanner project.
 
 ```bash
 # Run mcp-scan against this server:
@@ -309,14 +322,15 @@ Full threat model with attack chains and arXiv references: **[docs/THREAT_MODEL.
 
 ## 🤝 Contributing
 
-Adding a new challenge takes 5 steps:
+Adding a new challenge takes 6 steps:
 
 ```
 1. Create   vulnerabilities/your_module.py    — extend VulnerabilityModule
 2. Add      flags/flags.py                    — one FLAG{} entry
 3. Write    challenges/your_challenge.yaml    — title, hints, steps, remediation
 4. Register vulnerabilities/__init__.py       — add to ALL_MODULES list
-5. Write    tests/test_your_module.py         — at least 3 assertions
+5. Add      remediation/fixes.py              — vulnerable/secure code pair for show_fix()
+6. Write    tests/test_your_module.py         — at least 3 assertions
 ```
 
 See the full guide: **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**
@@ -331,7 +345,7 @@ The project especially needs:
 ## 🧪 Tests
 
 ```bash
-# Full suite (515 tests, ~5 seconds)
+# Full suite (559 tests, ~5 seconds)
 MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -q
 
 # Run a specific tier
@@ -383,6 +397,7 @@ Vulnerable-MCP-Server/
 │
 ├── challenges/                   # 18 YAML challenge definitions
 ├── flags/                        # CTF flag registry (18 flags)
+├── remediation/                  # Learning Mode: vulnerable/secure code pairs (show_fix)
 ├── resources/                    # Fake sensitive MCP resources
 │
 ├── agents/                       # Optional multi-agent build system
@@ -394,7 +409,7 @@ Vulnerable-MCP-Server/
 │   ├── test_data_agent.py
 │   └── dashboard.py              # Real-time Rich TUI monitor
 │
-├── tests/                        # 515 tests, no running server needed
+├── tests/                        # 559 tests, no running server needed
 │   ├── helpers.py                # ToolCapture — the testing secret weapon
 │   ├── fixtures/payloads.py      # Reusable attack payloads
 │   ├── test_beginner.py

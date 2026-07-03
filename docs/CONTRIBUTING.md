@@ -13,7 +13,7 @@ Adding a challenge is a fun creative exercise — and a meaningful one. Your cha
 
 ---
 
-## The 6-Step Pattern
+## The 7-Step Pattern
 
 ### Step 1 — Write the vulnerability module
 
@@ -183,7 +183,41 @@ Order doesn't matter for functionality, but keeping related modules together hel
 
 ---
 
-### Step 5 — Verify the challenge works
+### Step 5 — Add the Learning Mode fix
+
+*Why this step exists:* `show_fix(challenge_id)` is what turns "I found a bug" into "I know how to fix it." Every challenge needs a vulnerable/secure code pair so players can compare their exploit against the real remediation, not just read a paragraph of advice.
+
+Open `remediation/fixes.py` and add a `Fix` entry to the `_FIXES` dict:
+
+```python
+"YOURCAT-001": Fix(
+    challenge_id="YOURCAT-001",
+    vulnerable_code=(
+        "def my_vulnerable_tool(user_input: str) -> str:\n"
+        "    return _actually_dangerous(user_input)  # no validation"
+    ),
+    secure_code=(
+        "def my_vulnerable_tool(user_input: str) -> str:\n"
+        "    if not _is_allowed(user_input):\n"
+        '        raise ToolError("Invalid input")\n'
+        "    return _actually_dangerous(user_input)"
+    ),
+    explanation=(
+        "Explain *why* the fix works — what specifically about the secure "
+        "version closes the hole, not just that validation was added."
+    ),
+),
+```
+
+**Key rules:**
+- `vulnerable_code` should be the real vulnerable line(s) from your module, not a paraphrase
+- `secure_code` must be copy-pasteable — a real fix, not "sanitize your input"
+- `explanation` should say *why* the fix works, mirroring the bar set in the YAML `remediation` field
+- `tests/test_remediation.py` asserts every challenge ID in `flags/flags.py` has a matching fix — the test suite will fail until you add one
+
+---
+
+### Step 6 — Verify the challenge works
 
 *Why this step exists:* It's easy to have a module that registers correctly but returns the wrong flag, or triggers on the wrong input, or doesn't appear in `list_challenges()`. This script checks all five things in one pass.
 
@@ -240,7 +274,7 @@ asyncio.run(verify())
 
 ---
 
-### Step 6 — Write Tests
+### Step 7 — Write Tests
 
 *Why this step exists:* Tests are how future contributors know your challenge still works after a refactor. They also serve as living documentation — a new contributor reading your test class immediately understands the attack mechanics without running anything.
 
@@ -323,7 +357,7 @@ mod.register()                        # @app.tool() calls are captured here
 result = await cap.call("tool_name", arg="value")  # calls the function directly
 ```
 
-No network. No ports. No process management. The test suite runs 515 tests in under 5 seconds because of this pattern.
+No network. No ports. No process management. The test suite runs 559 tests in under 5 seconds because of this pattern.
 
 #### Required assertions
 
@@ -356,6 +390,7 @@ Before submitting a PR, verify all of these:
 - [ ] Tool is registered in `vulnerabilities/__init__.py`
 - [ ] Flag is in `flags/flags.py` and unique
 - [ ] Challenge YAML has all required fields: id, title, category, difficulty, cwe, cvss, points, tools, description, objective, exploitation_steps, hints (3 levels), flag, remediation
+- [ ] `Fix` entry added to `remediation/fixes.py` with real vulnerable/secure code and a "why it works" explanation
 - [ ] Sandbox mode: normal input returns simulated output (not a flag)
 - [ ] Sandbox mode: attack input returns the flag
 - [ ] `MCP_SANDBOX=false` path exists and is clearly marked
@@ -412,7 +447,7 @@ The orchestrator will: plan → code → test → docs. You review the output an
 
 1. Fork the repo
 2. Create a branch: `git checkout -b add-YOURCAT-001`
-3. Implement all 6 steps above
+3. Implement all 7 steps above
 4. Run the verification script
 5. Commit: `git commit -m "feat: add YOURCAT-001 (Your Vulnerability Title)"`
 6. Open a PR with:

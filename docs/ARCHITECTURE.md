@@ -325,7 +325,7 @@ Full protocol traces (when `MCP_TRACE=true`):
 
 ## 8. Testing Without a Server
 
-Our tests never start a real MCP server. Instead, they use a fake FastMCP object called `ToolCapture` that captures tool registrations and calls them as plain Python functions. This makes tests fast (under 5 seconds for 515 tests) and reliable (no network, no ports, no process management).
+Our tests never start a real MCP server. Instead, they use a fake FastMCP object called `ToolCapture` that captures tool registrations and calls them as plain Python functions. This makes tests fast (under 5 seconds for 559 tests) and reliable (no network, no ports, no process management).
 
 Here's how it works:
 

@@ -1028,7 +1028,7 @@ Environment variables override defaults. There is no config file — all configu
 
 ## 14. Running the Test Suite
 
-The test suite has **515 tests** covering all 18 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
+The test suite has **559 tests** covering all 18 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
 
 ### Install test dependencies
 
