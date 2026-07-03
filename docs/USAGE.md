@@ -110,7 +110,7 @@ Restart Claude Desktop. You'll see tool icons appear in the chat interface.
 ```
 list_challenges()
 ```
-Should return a formatted list of all 18 challenges.
+Should return a formatted list of all 21 challenges.
 
 ### Cursor
 
@@ -162,7 +162,7 @@ asyncio.run(run_exploit())
 
 ### `list_challenges()`
 
-Returns all 18 challenges with metadata. No arguments.
+Returns all 21 challenges with metadata. No arguments.
 
 ```
 list_challenges()
@@ -909,7 +909,7 @@ Filter by marker: `pytest -m sandbox`
 | `tests/test_sandbox.py` | Sandbox intercepts every attack category |
 | `tests/test_ctf_system.py` | YAML challenge definitions, flag submission, hints |
 | `tests/test_resources.py` | Sensitive MCP resources expose expected data |
-| `tests/test_flags.py` | 18 flags present, correct format, uniqueness |
+| `tests/test_flags.py` | 21 flags present, correct format, uniqueness |
 | `tests/test_modules.py` | Module contracts: base class, metadata, register() |
 | `tests/test_config.py` | Training mode gate, env var parsing |
 | `tests/scanner_compat/` | mcp-scan integration (skipped if not installed) |
@@ -1028,7 +1028,7 @@ Environment variables override defaults. There is no config file — all configu
 
 ## 14. Running the Test Suite
 
-The test suite has **559 tests** covering all 18 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
+The test suite has **633 tests** covering all 21 vulnerability challenges, the CTF system, sandbox enforcement, module contracts, and MCP resources. Tests use [pytest](https://docs.pytest.org/) with [pytest-asyncio](https://pytest-asyncio.readthedocs.io/).
 
 ### Install test dependencies
 
@@ -1071,7 +1071,7 @@ MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ --cov=. --cov-re
 | File | What it covers |
 |------|---------------|
 | `tests/test_config.py` | Training mode gate, env var parsing, fake secret prefixes |
-| `tests/test_flags.py` | 18 flags present, correct format, uniqueness, submit_flag() |
+| `tests/test_flags.py` | 21 flags present, correct format, uniqueness, submit_flag() |
 | `tests/test_modules.py` | Module contracts: base class, metadata fields, register() |
 | `tests/test_beginner.py` | BEGINNER-001 through BEGINNER-004 exploitability |
 | `tests/test_intermediate.py` | INTERMEDIATE-001 through INTERMEDIATE-004 exploitability |

@@ -439,6 +439,85 @@ _FIXES: dict[str, Fix] = {
             "of expected URL shapes before use."
         ),
     ),
+    "GIT-001": Fix(
+        challenge_id="GIT-001",
+        vulnerable_code=(
+            "if not repository.startswith(_WORKSPACE_ROOT):\n"
+            '    return f"Error: repository must be inside {_WORKSPACE_ROOT}"\n'
+            "# a raw string comparison — no path-separator boundary is required,\n"
+            "# so \"/workspace/project-evil-repo\" passes despite being a sibling dir"
+        ),
+        secure_code=(
+            "from pathlib import Path\n\n"
+            "workspace_root = Path(_WORKSPACE_ROOT).resolve()\n"
+            "resolved = Path(repository).resolve()\n"
+            "if not resolved.is_relative_to(workspace_root):\n"
+            '    return f"Error: repository must be inside {_WORKSPACE_ROOT}"'
+        ),
+        explanation=(
+            "startswith() is a character-by-character string comparison with no "
+            "concept of a path separator boundary, so any path whose characters "
+            "happen to begin with the workspace root string passes — including "
+            "sibling directories. resolve() normalizes both paths and "
+            "is_relative_to() correctly requires the workspace root to be a real "
+            "path-component ancestor, not just a string prefix."
+        ),
+    ),
+    "GIT-002": Fix(
+        challenge_id="GIT-002",
+        vulnerable_code=(
+            "def git_init(directory: str) -> str:\n"
+            "    # no workspace-scope check at all — not even the flawed one\n"
+            "    # from git_status()\n"
+            '    result = subprocess.run(["git", "init", directory], ...)\n'
+            "    return result.stdout + result.stderr"
+        ),
+        secure_code=(
+            "def git_init(directory: str) -> str:\n"
+            "    resolved = Path(directory).resolve()\n"
+            "    if not resolved.is_relative_to(Path(_WORKSPACE_ROOT).resolve()):\n"
+            '        raise ToolError("directory must be inside the workspace")\n'
+            "    if any(marker in str(resolved) for marker in _SENSITIVE_DIR_MARKERS):\n"
+            '        raise ToolError("target directory is on the sensitive-path denylist")\n'
+            '    result = subprocess.run(["git", "init", str(resolved)], ...)\n'
+            "    return result.stdout + result.stderr"
+        ),
+        explanation=(
+            "Every git_* tool that touches the filesystem needs the same "
+            "workspace containment check — there's no reason git_init() should "
+            "be the one exception. A denylist of sensitive directory names on "
+            "top of the containment check is defense-in-depth: even a workspace "
+            "misconfiguration shouldn't let a tool touch ~/.ssh or ~/.aws."
+        ),
+    ),
+    "GIT-003": Fix(
+        challenge_id="GIT-003",
+        vulnerable_code=(
+            "def git_diff(repository: str, revision: str) -> str:\n"
+            '    result = subprocess.run(["git", "-C", repository, "diff", revision], ...)\n'
+            "    # revision goes straight into the argv list — a leading '-'\n"
+            "    # makes git parse it as an option, not a revision"
+        ),
+        secure_code=(
+            "def git_diff(repository: str, revision: str) -> str:\n"
+            "    if revision.startswith(\"-\"):\n"
+            '        raise ToolError("revision must not start with \'-\'")\n'
+            "    result = subprocess.run(\n"
+            '        ["git", "-C", repository, "diff", "--", revision], ...\n'
+            "    )\n"
+            "    # \"--\" tells git everything after it is a positional argument,\n"
+            "    # never an option, regardless of leading characters"
+        ),
+        explanation=(
+            "Command-line tools distinguish options from positional arguments "
+            "by a leading '-' — any user-controlled value forwarded into a CLI "
+            "argument list needs to account for that. Rejecting a leading dash "
+            "helps, but the robust fix is the '--' separator convention "
+            "(POSIX Utility Syntax Guidelines): once git sees '--', it stops "
+            "parsing options entirely, so an attacker-supplied revision can "
+            "never be reinterpreted as a flag no matter what it starts with."
+        ),
+    ),
     "MULTI-001": Fix(
         challenge_id="MULTI-001",
         vulnerable_code=(

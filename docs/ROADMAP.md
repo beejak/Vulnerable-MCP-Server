@@ -85,19 +85,19 @@ Prompt injection in README/issue
 
 **Goal:** Each challenge maps to a real CVE or published PoC. Security researchers can use this to test scanner accuracy.
 
-| Challenge | Maps To | What to Build |
-|-----------|---------|---------------|
-| OAUTH-001 | CVE-2025-6514 | OAuth metadata endpoint that returns malicious `authorization_endpoint` URL containing command injection payload |
-| OAUTH-002 | CVE-2025-6515 | Session token hijacking via OAuth state parameter reuse |
-| GIT-001 | CVE-2025-68145 | `git_ops` tool with `--repository` flag that doesn't validate path scope |
-| GIT-002 | CVE-2025-68143 | `git_init` accepting `~/.ssh` as target directory |
-| GIT-003 | CVE-2025-68144 | `git_diff` with unsanitized argument passthrough |
-| SDK-001 | CVE-2026-25536 | Multi-session server where responses leak across client boundaries |
-| SSRF-002 | MarkItDown unpatched | URL fetcher that reaches 169.254.169.254 metadata endpoint |
+| Challenge | Maps To | What to Build | Status |
+|-----------|---------|---------------|--------|
+| OAUTH-001 | CVE-2025-6514 | OAuth metadata endpoint that returns malicious `authorization_endpoint` URL containing command injection payload | DONE |
+| OAUTH-002 | CVE-2025-6515 | Session token hijacking via OAuth state parameter reuse | Not started |
+| GIT-001 | CVE-2025-68145 | `git_ops` tool with `--repository` flag that doesn't validate path scope | DONE |
+| GIT-002 | CVE-2025-68143 | `git_init` accepting `~/.ssh` as target directory | DONE |
+| GIT-003 | CVE-2025-68144 | `git_diff` with unsanitized argument passthrough | DONE |
+| SDK-001 | CVE-2026-25536 | Multi-session server where responses leak across client boundaries | Not started |
+| SSRF-002 | MarkItDown unpatched | URL fetcher that reaches 169.254.169.254 metadata endpoint | Not started |
 
 **Deliverables:**
-- `vulnerabilities/oauth.py` — OAuth flow vulnerabilities
-- `vulnerabilities/git_ops.py` — Git MCP server RCE chain
+- `vulnerabilities/oauth.py` — OAuth flow vulnerabilities (done)
+- `vulnerabilities/git_ops.py` — Git MCP server RCE chain (done — simulated mechanism, not a literal reproduction of upstream mcp-server-git; same fidelity level as oauth.py)
 - `vulnerabilities/session.py` — Cross-client session leak
 - Update challenge YAML files with CVE references
 - CI test: verify each challenge flag is reachable

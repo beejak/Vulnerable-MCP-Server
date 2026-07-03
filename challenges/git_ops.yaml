@@ -1,0 +1,123 @@
+challenges:
+  - id: GIT-001
+    title: "Path Scope Bypass via Naive Prefix Check (CVE-2025-68145)"
+    category: git-ops
+    difficulty: advanced
+    cwe: CWE-22
+    cvss: 7.5
+    points: 300
+    tools:
+      - git_status
+    description: |
+      git_status() validates the repository parameter with
+      repository.startswith(WORKSPACE_ROOT) instead of a real path containment
+      check. A sibling directory whose name merely shares the same leading
+      characters as the workspace root — with no path separator between them —
+      passes the check while being a completely different directory tree.
+
+      This is the mechanism behind CVE-2025-68145 in Anthropic's
+      mcp-server-git: the --repository scope check used string prefix
+      comparison instead of resolved path containment.
+    objective: |
+      Find a repository path that passes the startswith() check but is not
+      actually inside the configured workspace, and observe the bypass
+      confirmation in the response.
+    exploitation_steps:
+      - "Call git_status('/workspace/project') to see the normal, in-scope response"
+      - "Try a sibling directory that shares the same leading characters: git_status('/workspace/project-evil-repo')"
+      - "Notice it passes the prefix check but is not inside /workspace/project/"
+      - "The flag appears when the bypass is confirmed"
+    hints:
+      - level: 1
+        text: "The repository check looks correct, but how exactly does it compare strings?"
+      - level: 2
+        text: "Try a repository path that shares the same leading characters as /workspace/project but is actually a different directory."
+      - level: 3
+        text: "Call git_status('/workspace/project-evil-repo'). It starts with the same string but is a sibling directory, not a subdirectory."
+    flag: "FLAG{g1t_p4th_sc0pe_byp4ss_pr3f1x_ch3ck}"
+    remediation: |
+      - Never validate directory scope with a raw string prefix check
+      - Resolve both paths with pathlib.Path.resolve() first
+      - Verify containment with Path.is_relative_to() (or os.path.commonpath())
+      - These correctly require a path-separator boundary between the workspace root and the requested path
+
+  - id: GIT-002
+    title: "Arbitrary git_init Target Directory (CVE-2025-68143)"
+    category: git-ops
+    difficulty: advanced
+    cwe: CWE-22
+    cvss: 8.1
+    points: 300
+    tools:
+      - git_init
+    description: |
+      git_init() accepts any filesystem path with no workspace-scope
+      validation whatsoever — not even the flawed prefix check from GIT-001.
+      An attacker can turn any directory the server process can write to,
+      including sensitive ones like ~/.ssh, into a git repository. This is
+      the first step toward planting a malicious .git/config for later
+      exploitation (see GIT-003).
+
+      This is the mechanism behind CVE-2025-68143 in Anthropic's
+      mcp-server-git.
+    objective: |
+      Call git_init() with a target directory outside the workspace — ideally
+      a sensitive one — and observe that nothing stops it.
+    exploitation_steps:
+      - "Call git_init('/workspace/project/subdir') to see a normal, expected response"
+      - "Call git_init('~/.ssh') — a directory git_status() would have rejected"
+      - "Notice there is no scope check at all, unlike git_status()"
+      - "The flag appears when a sensitive directory target is detected"
+    hints:
+      - level: 1
+        text: "Does git_init() check the target directory against the workspace at all?"
+      - level: 2
+        text: "Try initializing a git repository somewhere outside the workspace — a directory you wouldn't expect a scanner to have touched."
+      - level: 3
+        text: "Call git_init('~/.ssh'). Nothing stops it — not even the broken check from GIT-001."
+    flag: "FLAG{g1t_1n1t_4rb1tr4ry_d1r3ct0ry_ssh}"
+    remediation: |
+      - Apply the same workspace containment check to git_init() as every other git_* tool
+      - There is no reason for the repository-creation tool to be exempt from scope validation
+      - Maintain a denylist of sensitive directory names (.ssh, .aws, .gnupg, shell profile directories) that no tool may target regardless of workspace scope
+
+  - id: GIT-003
+    title: "Argument Injection in git_diff via Revision Parameter (CVE-2025-68144)"
+    category: git-ops
+    difficulty: advanced
+    cwe: CWE-88
+    cvss: 7.8
+    points: 300
+    tools:
+      - git_diff
+    description: |
+      git_diff() passes the revision parameter directly into the git CLI's
+      argument list. git parses any argument beginning with '-' as an option
+      rather than a revision — so a revision value of '--output=/some/path'
+      redirects the diff output to an arbitrary file instead of comparing two
+      commits.
+
+      This is the mechanism behind CVE-2025-68144 in Anthropic's
+      mcp-server-git, and completes the chain: GIT-002 turns a sensitive
+      directory into a git repository, and this argument injection can write
+      into files inside it.
+    objective: |
+      Supply a revision value that git interprets as a command-line option
+      instead of a commit reference, and observe the argument injection.
+    exploitation_steps:
+      - "Call git_diff('/workspace/project', 'HEAD') for a normal response"
+      - "Call git_diff('/workspace/project', '--output=/tmp/pwned') instead"
+      - "Notice the leading '-' makes git treat it as an option, not a revision"
+      - "The flag appears when the injection is detected"
+    hints:
+      - level: 1
+        text: "git_diff takes a revision parameter. What happens if that value looks like a command-line flag instead of a commit reference?"
+      - level: 2
+        text: "Command-line tools distinguish options from positional arguments by a leading '-'. What if your revision starts with one?"
+      - level: 3
+        text: "Call git_diff(repository='/workspace/project', revision='--output=/tmp/pwned'). git interprets --output as an option, not a revision."
+    flag: "FLAG{g1t_d1ff_4rgum3nt_1nj3ct10n_d4sh}"
+    remediation: |
+      - Reject any revision value that starts with '-' before passing it to the git CLI
+      - Better: pass '--' as a separator between options and positional arguments (git diff -- <revision>)
+      - The '--' separator tells git to stop parsing options for everything after it, regardless of leading characters

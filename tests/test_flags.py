@@ -7,8 +7,8 @@ ALL_IDS = list(_FLAGS.keys())
 
 
 class TestFlagRegistry:
-    def test_all_eighteen_flags_present(self):
-        assert len(_FLAGS) == 18
+    def test_all_twenty_one_flags_present(self):
+        assert len(_FLAGS) == 21
 
     def test_all_flags_have_correct_format(self):
         for cid, flag in _FLAGS.items():

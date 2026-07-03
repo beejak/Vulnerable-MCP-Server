@@ -64,7 +64,7 @@ npx @modelcontextprotocol/inspector http://localhost:8000/sse
 
 Or add it to Claude Desktop (see [README.md](../README.md)) and type tool calls directly in chat.
 
-**Step 4 — See all 18 challenges:**
+**Step 4 — See all 21 challenges:**
 ```
 list_challenges()
 ```
@@ -81,7 +81,7 @@ If you want to see real execution — commands actually running, HTTP requests a
 
 ---
 
-## The 18 Challenges
+## The 21 Challenges
 
 ### Level 1 🟢 — Beginner (100–150 pts each)
 
@@ -94,7 +94,7 @@ You'll inspect a tool description's raw bytes and find hidden Unicode characters
 You'll inject a shell metacharacter (`;`, `&&`, `|`) into a tool that runs commands with `shell=True`. This matters because it's behind 23% of all MCP server vulnerabilities found in the wild.
 
 **BEGINNER-003 — Path Traversal**
-You'll escape the server's working directory using `../` sequences and read files you shouldn't be able to reach. This matters because the fix is a single line of code — and most servers skip it. (See CVE-2025-68143.)
+You'll escape the server's working directory using `../` sequences and read files you shouldn't be able to reach. This matters because the fix is a single line of code — and most servers skip it.
 
 **BEGINNER-004 — Indirect Prompt Injection**
 You'll fetch a URL that contains adversarial instructions hidden in the page content, and watch the LLM follow them. This matters because any tool that returns external content verbatim is a prompt injection vector.
@@ -134,6 +134,15 @@ You'll trigger exponential CPU exhaustion (`fibonacci(45)`) and factorial memory
 
 **ADVANCED-004 — Pickle RCE** *(highest points in Level 3: 400 pts)*
 You'll craft a Python pickle payload locally, serialize it to base64, and send it to a tool that calls `pickle.loads()` on your input. This matters because pickle is not data — it's executable bytecode.
+
+**GIT-001 — Path Scope Bypass** *(CVE-2025-68145)*
+You'll find a repository path that passes a `startswith(WORKSPACE_ROOT)` check while pointing at a completely different directory tree. This matters because a naive string-prefix check has no concept of a path separator boundary — a sibling directory that merely shares the same leading characters slips right through.
+
+**GIT-002 — Arbitrary git_init Target** *(CVE-2025-68143)*
+You'll call `git_init()` on a sensitive directory like `~/.ssh` and discover there's no workspace-scope check at all — not even the flawed one from GIT-001. This matters because it's the first step toward planting a malicious `.git/config` in a directory that was never supposed to be writable by this tool.
+
+**GIT-003 — git diff Argument Injection** *(CVE-2025-68144)*
+You'll pass a revision value starting with `-` and watch git interpret it as a command-line option instead of a commit reference. This matters because any user-controlled value forwarded into a CLI argument list can be reinterpreted as a flag — enabling arbitrary file writes via `--output=<path>`. Together with GIT-002, this completes the real mcp-server-git CVE chain.
 
 ---
 
@@ -215,7 +224,7 @@ Wrong flag:
 
 ## What Happens Next
 
-After you've captured all 18 flags, consider:
+After you've captured all 21 flags, consider:
 
 - **Run a scanner against this server.** `mcp-scan http://localhost:8000/sse` (by Invariant Labs) will find several of the poisoning issues. See how many it catches — and notice which ones it misses (hint: rug pull evasion is unsolved for now).
 - **Contribute a new challenge.** You understand the vulnerability patterns now. See [docs/CONTRIBUTING.md](CONTRIBUTING.md) for the exact steps. Your challenge will be played by security researchers around the world.

@@ -10,6 +10,60 @@ mattered, and what to do differently.
 
 ---
 
+## 2026-07-03 — A test suite that hardcodes counts is a checklist, not just a gate
+
+**What happened:** Adding the GIT-001/002/003 module and registering it in
+`ALL_MODULES` immediately broke `tests/test_modules.py` with `KeyError:
+'GitOpsModule'` (a lookup into an `EXPECTED_CHALLENGES` dict keyed by module
+class name) and would have separately failed `test_all_ten_modules_registered`
+and `test_flags.py::test_all_eighteen_flags_present` had they been reached.
+None of these were bugs in the new code — they were pre-existing tests
+encoding "the current total is N" as a literal assertion.
+
+**Why it mattered:** Those hardcoded-count tests aren't friction to route
+around — they're a built-in checklist of every place a new challenge needs to
+be reflected (module registry, flag registry, per-module expected-ID mapping).
+Following the failures one at a time was faster and more complete than trying
+to remember everything from `CONTRIBUTING.md` by hand.
+
+**What to do differently:** When a hardcoded-total test fails after adding
+content, don't just bump the number and move on — treat the failure as a
+prompt to check for sibling hardcoded totals elsewhere (docs, badges,
+docstrings) that the test suite doesn't cover but that will now also be
+wrong.
+
+---
+
+## 2026-07-03 — Adding scored content means a full-repo consistency sweep, and it surfaces real bugs
+
+**What happened:** Adding 3 new challenges (GIT-001/002/003) touched a
+"challenge count" or "point total" number in over a dozen places across
+`README.md` and `docs/*.md` — badges, tier tables, a scoreboard with
+per-tier running totals, a project-layout tree, an architecture diagram's
+module count, and prose mentions in `GETTING_STARTED.md` and `USAGE.md`.
+Recomputing the scoreboard from the actual YAML `points:` values (rather
+than trusting the table already in the README) revealed the existing
+numbers were already wrong before this change — e.g. the Advanced tier
+table showed a flat 300 points for every entry when the real YAML values
+were 300/300/250/400. Separately, `GETTING_STARTED.md`'s BEGINNER-003
+write-up cited CVE-2025-68143 — which is actually GIT-002's CVE, not path
+traversal's.
+
+**Why it mattered:** A "just add the new rows" edit would have left the
+existing wrong numbers in place, and shipped a new, correct GIT-002 citation
+right alongside an old, incorrect citation of the exact same CVE attached to
+an unrelated challenge — a much more visible inconsistency than the
+pre-existing bug alone.
+
+**What to do differently:** Before editing a summary table (totals, counts,
+badges), recompute it from the underlying source of truth (the YAML files,
+in this case) rather than incrementing the previously-displayed number. If
+that surfaces a pre-existing discrepancy in a section you're already
+touching, fix it — leaving a known-wrong number in place right next to your
+own correct one is worse than the original bug alone.
+
+---
+
 ## 2026-07-03 — Unverifiable positioning claims erode credibility faster than missing features
 
 **What happened:** The README claimed this was "the world's first deliberately

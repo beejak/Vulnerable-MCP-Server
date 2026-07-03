@@ -357,7 +357,7 @@ mod.register()                        # @app.tool() calls are captured here
 result = await cap.call("tool_name", arg="value")  # calls the function directly
 ```
 
-No network. No ports. No process management. The test suite runs 559 tests in under 5 seconds because of this pattern.
+No network. No ports. No process management. The test suite runs 633 tests in under 5 seconds because of this pattern.
 
 #### Required assertions
 

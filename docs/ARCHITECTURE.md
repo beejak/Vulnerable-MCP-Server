@@ -49,7 +49,7 @@ vulnerable-mcp-server/
 │   ├── tool_shadowing.py       # SHADOW-001/002
 │   ├── oauth.py                # OAUTH-001
 │   ├── multi_vector.py         # MULTI-001
-│   ├── git_ops.py              # GIT-001/002/003 (Phase 2)
+│   ├── git_ops.py              # GIT-001/002/003 (mcp-server-git CVE chain)
 │   └── sampling.py             # SAMPLE-001/002 (Phase 2)
 │
 ├── resources/
@@ -64,6 +64,7 @@ vulnerable-mcp-server/
 │   ├── tool_shadowing.yaml     # SHADOW-001/002
 │   ├── oauth.yaml              # OAUTH-001
 │   ├── multi_vector.yaml       # MULTI-001
+│   ├── git_ops.yaml            # GIT-001/002/003
 │   └── cve_accurate.yaml       # Phase 2 CVE challenges
 │
 ├── multi_server/               # Phase 2: second trusted server for shadowing
@@ -93,6 +94,7 @@ vulnerable-mcp-server/
 │   ├── test_tool_shadowing.py  # SHADOW-001 and SHADOW-002
 │   ├── test_oauth.py           # OAUTH-001
 │   ├── test_multi_vector.py    # MULTI-001 full chain
+│   ├── test_git_ops.py         # GIT-001/002/003 (mcp-server-git CVE chain)
 │   ├── test_sandbox.py         # Verify sandbox mode blocks real execution
 │   ├── test_flags.py           # Flag system unit tests
 │   ├── test_modules.py         # Module contracts: base class, metadata, register()
@@ -325,7 +327,7 @@ Full protocol traces (when `MCP_TRACE=true`):
 
 ## 8. Testing Without a Server
 
-Our tests never start a real MCP server. Instead, they use a fake FastMCP object called `ToolCapture` that captures tool registrations and calls them as plain Python functions. This makes tests fast (under 5 seconds for 559 tests) and reliable (no network, no ports, no process management).
+Our tests never start a real MCP server. Instead, they use a fake FastMCP object called `ToolCapture` that captures tool registrations and calls them as plain Python functions. This makes tests fast (under 5 seconds for 633 tests) and reliable (no network, no ports, no process management).
 
 Here's how it works:
 

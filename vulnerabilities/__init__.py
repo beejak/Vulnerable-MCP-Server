@@ -14,6 +14,7 @@ To add a new challenge:
 from vulnerabilities.auth import AuthModule
 from vulnerabilities.dos import DoSModule
 from vulnerabilities.exfiltration import ExfiltrationModule
+from vulnerabilities.git_ops import GitOpsModule
 from vulnerabilities.injection import InjectionModule
 from vulnerabilities.multi_vector import MultiVectorModule
 from vulnerabilities.oauth import OAuthModule
@@ -29,6 +30,7 @@ ALL_MODULES = [
     ExfiltrationModule,     # INTERMEDIATE-003
     PromptInjectionModule,  # BEGINNER-004, ADVANCED-001
     DoSModule,              # ADVANCED-003
+    GitOpsModule,           # GIT-001/002/003
     RugPullModule,          # RUG-001/002
     ToolShadowingModule,    # SHADOW-001/002
     OAuthModule,            # OAUTH-001

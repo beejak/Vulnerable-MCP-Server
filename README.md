@@ -14,9 +14,9 @@
 
 [![CI](https://github.com/beejak/Vulnerable-MCP-Server/actions/workflows/ci.yml/badge.svg?branch=claude%2Fkind-wiles)](https://github.com/beejak/Vulnerable-MCP-Server/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![18 Challenges](https://img.shields.io/badge/challenges-18-FF4444)](docs/GETTING_STARTED.md)
+[![21 Challenges](https://img.shields.io/badge/challenges-21-FF4444)](docs/GETTING_STARTED.md)
 [![Real CVEs](https://img.shields.io/badge/CVEs-mapped-FF6B35)](docs/THREAT_MODEL.md)
-[![559 Tests](https://img.shields.io/badge/tests-559%20passing-44BB44)](tests/)
+[![633 Tests](https://img.shields.io/badge/tests-633%20passing-44BB44)](tests/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
 **[🚀 Quick Start](#-quick-start) · [🗺️ Challenges](#️-challenges) · [🎮 How to Play](#-how-to-play) · [🏗️ Architecture](#️-architecture) · [🤝 Contributing](#-contributing)**
@@ -38,7 +38,7 @@ Now imagine those tools are **lying to you**.
 
 **That's what this project is about.**
 
-Vulnerable MCP Server is a deliberately broken [Model Context Protocol](https://modelcontextprotocol.io) server with **18 intentional vulnerabilities** across 5 attack categories. Every vulnerability is based on a real CVE, a published PoC, or a novel MCP-specific attack pattern that doesn't exist in any other training tool.
+Vulnerable MCP Server is a deliberately broken [Model Context Protocol](https://modelcontextprotocol.io) server with **21 intentional vulnerabilities** across 5 attack categories. Every vulnerability is based on a real CVE, a published PoC, or a novel MCP-specific attack pattern that doesn't exist in any other training tool.
 
 You find the bugs. You capture the flags. You learn why they matter.
 
@@ -102,7 +102,7 @@ docker compose up
 Once connected, these three commands get you started:
 
 ```
-list_challenges()                         # See all 18 challenges + point values
+list_challenges()                         # See all 21 challenges + point values
 get_challenge_details("BEGINNER-001")     # Read the backstory
 get_hint("BEGINNER-001", 1)              # Get a nudge if you're stuck
 submit_flag("BEGINNER-001", "FLAG{...}") # Check your answer
@@ -113,7 +113,7 @@ show_fix("BEGINNER-001")                 # Learning Mode: vulnerable code vs. th
 
 ## 🗺️ Challenges
 
-**18 challenges · 5 tiers · 5,750 total points · Every flag is `FLAG{l33t_sp34k}`**
+**21 challenges · 5 tiers · 7,100 total points · Every flag is `FLAG{l33t_sp34k}`**
 
 Start at Beginner. Work up. The Expert tier has attacks that don't exist anywhere else.
 
@@ -155,6 +155,9 @@ Start at Beginner. Work up. The Expert tier has attacks that don't exist anywher
 | `ADVANCED-002` | **Template Injection** | Jinja2 SSTI — `{{7*7}}` → `{{config.__class__.__init__.__globals__}}` | 300 |
 | `ADVANCED-003` | **CPU Exhaustion DoS** | `fib(10000)` and permutation generation — the server stops responding | 300 |
 | `ADVANCED-004` | **Pickle RCE** | Deserializing untrusted data. The "never do this" lesson, made interactive | 300 |
+| `GIT-001` | **Path Scope Bypass** | `mcp-server-git`'s `--repository` check uses `startswith()`, not real path containment | 300 |
+| `GIT-002` | **Arbitrary git_init Target** | No scope check at all — turn `~/.ssh` into a git repository | 300 |
+| `GIT-003` | **git diff Argument Injection** | A revision starting with `-` becomes a CLI flag, not a commit reference | 300 |
 
 ---
 
@@ -192,7 +195,7 @@ Start at Beginner. Work up. The Expert tier has attacks that don't exist anywher
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  1.  list_challenges()           →  See all 18 challenges      │
+│  1.  list_challenges()           →  See all 21 challenges      │
 │  2.  get_challenge_details(id)   →  Read the backstory         │
 │  3.  Call the vulnerable tool    →  Trigger the vulnerability  │
 │  4.  Find FLAG{...} in output    →  Copy it                    │
@@ -207,7 +210,7 @@ Start at Beginner. Work up. The Expert tier has attacks that don't exist anywher
 Capturing the flag only proves you found the bug. `show_fix(challenge_id)`
 goes one step further — it prints the exact vulnerable code pattern from the
 server's source next to a secure rewrite, plus a short explanation of why the
-fix closes the hole. Every one of the 18 challenges has one. This is the
+fix closes the hole. Every one of the 21 challenges has one. This is the
 difference between "I found a broken tool" and "I know how to fix this in my
 own code."
 
@@ -229,11 +232,11 @@ Want real execution for advanced research? That requires Docker and `MCP_SANDBOX
 
 | Tier | Flags | Points Each | Running Total |
 |---|---|---|---|
-| 🟢 Beginner | 4 | 100 | 400 |
-| 🟡 Intermediate | 4 | 200 | 1,200 |
-| 🔴 Advanced | 4 | 300 | 2,400 |
-| 💀 Expert | 4 | 500–600 | 4,550 |
-| ☠️ Boss | 2 | 600–1,000 | **5,750** |
+| 🟢 Beginner | 4 | 100–150 | 450 |
+| 🟡 Intermediate | 4 | 150–200 | 1,200 |
+| 🔴 Advanced | 7 | 250–400 | 3,350 |
+| 💀 Expert | 4 | 500–600 | 5,500 |
+| ☠️ Boss | 2 | 600–1,000 | **7,100** |
 
 ---
 
@@ -248,14 +251,15 @@ Want real execution for advanced research? That requires Docker and `MCP_SANDBOX
 ┌──────────────────────────▼───────────────────────────────────────────┐
 │                        server.py  (FastMCP)                           │
 │   ┌───────────────────────────────────────────────────────────────┐  │
-│   │                  Vulnerability Modules  (10)                   │  │
+│   │                  Vulnerability Modules  (11)                   │  │
 │   │  🟢  tool_poisoning   injection   auth   exfiltration         │  │
 │   │  🟡  prompt_injection   dos                                    │  │
+│   │  🔴  git_ops                                                   │  │
 │   │  💀  rug_pull   tool_shadowing   oauth   multi_vector         │  │
 │   └───────────────────────────────────────────────────────────────┘  │
 │   ┌──────────────┐ ┌───────────────┐ ┌────────────────┐ ┌──────────┐ │
 │   │  flags/      │ │  challenges/  │ │  remediation/  │ │resources/│ │
-│   │  18 flags    │ │  18 YAML      │ │  18 fix pairs  │ │fake creds│ │
+│   │  21 flags    │ │  21 YAML      │ │  21 fix pairs  │ │fake creds│ │
 │   └──────────────┘ └───────────────┘ └────────────────┘ └──────────┘ │
 └──────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -310,7 +314,10 @@ For automated scanner tests: [`tests/scanner_compat/`](tests/scanner_compat/)
 |---|---|---|
 | `OAUTH-001` | CVE-2025-6514 | **9.6** Critical |
 | `ADVANCED-001` | Unpatched MarkItDown SSRF | High |
-| `ADVANCED-004` | CWE-502 Deserialization | 8.1 |
+| `ADVANCED-004` | CWE-502 Deserialization | 9.8 |
+| `GIT-001` | CVE-2025-68145 | 7.5 |
+| `GIT-002` | CVE-2025-68143 | 8.1 |
+| `GIT-003` | CVE-2025-68144 | 7.8 |
 | `RUG-001` | Novel attack (ETDI paper) | 8.8 |
 | `RUG-002` | Novel attack (timed evasion) | 9.1 |
 | `SHADOW-001` | Novel attack (Invariant PoC) | 9.3 |
@@ -337,7 +344,7 @@ See the full guide: **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**
 
 The project especially needs:
 - 🔥 `SAMPLE-001` — MCP sampling abuse (`sampling/createMessage` manipulation)
-- 🔥 `GIT-001/002/003` — Docker images of the actual vulnerable `mcp-server-git`
+- 🔥 `PROTO-001/002` — protocol-level attacks (calling tools before initialize, oversized payloads)
 - 🔥 More scanner compatibility tests
 
 ---
@@ -345,7 +352,7 @@ The project especially needs:
 ## 🧪 Tests
 
 ```bash
-# Full suite (559 tests, ~5 seconds)
+# Full suite (633 tests, ~5 seconds)
 MCP_TRAINING_MODE=true MCP_SANDBOX=true python -m pytest tests/ -q
 
 # Run a specific tier
@@ -395,8 +402,8 @@ Vulnerable-MCP-Server/
 │   ├── oauth.py                  # OAUTH-001 (CVE-2025-6514)
 │   └── multi_vector.py           # MULTI-001 (boss fight)
 │
-├── challenges/                   # 18 YAML challenge definitions
-├── flags/                        # CTF flag registry (18 flags)
+├── challenges/                   # 21 YAML challenge definitions
+├── flags/                        # CTF flag registry (21 flags)
 ├── remediation/                  # Learning Mode: vulnerable/secure code pairs (show_fix)
 ├── resources/                    # Fake sensitive MCP resources
 │
@@ -409,7 +416,7 @@ Vulnerable-MCP-Server/
 │   ├── test_data_agent.py
 │   └── dashboard.py              # Real-time Rich TUI monitor
 │
-├── tests/                        # 559 tests, no running server needed
+├── tests/                        # 633 tests, no running server needed
 │   ├── helpers.py                # ToolCapture — the testing secret weapon
 │   ├── fixtures/payloads.py      # Reusable attack payloads
 │   ├── test_beginner.py

@@ -13,6 +13,7 @@ EXPECTED_CHALLENGES = {
     "ExfiltrationModule":   ["INTERMEDIATE-003"],
     "PromptInjectionModule": ["BEGINNER-004", "ADVANCED-001"],
     "DoSModule":            ["ADVANCED-003"],
+    "GitOpsModule":         ["GIT-001", "GIT-002", "GIT-003"],
     "RugPullModule":        ["RUG-001", "RUG-002"],
     "ToolShadowingModule":  ["SHADOW-001", "SHADOW-002"],
     "OAuthModule":          ["OAUTH-001"],
@@ -26,8 +27,8 @@ def cfg():
 
 
 class TestModuleContract:
-    def test_all_ten_modules_registered(self):
-        assert len(ALL_MODULES) == 10
+    def test_all_eleven_modules_registered(self):
+        assert len(ALL_MODULES) == 11
 
     def test_all_modules_inherit_base(self):
         for ModCls in ALL_MODULES:

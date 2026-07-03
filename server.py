@@ -2,7 +2,7 @@
 Vulnerable MCP Server — Main Entry Point
 
 A deliberately vulnerable MCP server for security education and CTF training.
-Implements 12 intentional vulnerabilities across 4 difficulty tiers.
+Implements 21 intentional vulnerabilities across 5 difficulty tiers.
 
 Usage:
     MCP_TRAINING_MODE=true python server.py                    # stdio (Claude Desktop)

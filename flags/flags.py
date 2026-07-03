@@ -31,6 +31,10 @@ _FLAGS: dict[str, str] = {
     "OAUTH-001": "FLAG{0auth_m3t4d4t4_p01s0n3d_CVE_2025_6514}",
     # Phase 2 - Multi-Vector
     "MULTI-001": "FLAG{mult1_v3ct0r_ch41n_c0nfu53d_d3puty}",
+    # Phase 1 - Git Ops CVE Chain
+    "GIT-001": "FLAG{g1t_p4th_sc0pe_byp4ss_pr3f1x_ch3ck}",
+    "GIT-002": "FLAG{g1t_1n1t_4rb1tr4ry_d1r3ct0ry_ssh}",
+    "GIT-003": "FLAG{g1t_d1ff_4rgum3nt_1nj3ct10n_d4sh}",
 }
 
 
