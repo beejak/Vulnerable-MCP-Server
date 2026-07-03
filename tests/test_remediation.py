@@ -43,8 +43,14 @@ def app():
 
 
 async def _call(app, name: str, **kwargs) -> str:
-    """Invoke a tool through FastMCP's public call_tool() API and return its text."""
-    content, _ = await app.call_tool(name, kwargs)
+    """Invoke a tool through FastMCP's public call_tool() API and return its text.
+
+    Before mcp 1.9.5, call_tool() returned a plain Sequence[ContentBlock].
+    From 1.9.5 onward it returns (Sequence[ContentBlock], dict). Handle both
+    since pyproject.toml only requires mcp[cli]>=1.0.0.
+    """
+    result = await app.call_tool(name, kwargs)
+    content = result[0] if isinstance(result, tuple) else result
     return content[0].text
 
 
